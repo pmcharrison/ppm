@@ -16,12 +16,16 @@ BEGIN_RCPP
 END_RCPP
 }
 
-RcppExport SEXP _rcpp_module_boot_ppm_model();
+RcppExport SEXP _rcpp_module_boot_ppm_simple();
+RcppExport SEXP _rcpp_module_boot_ppm_decay();
+RcppExport SEXP _rcpp_module_boot_record_decay();
 RcppExport SEXP _rcpp_module_boot_unif_module();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ppm_rcpp_hello_world", (DL_FUNC) &_ppm_rcpp_hello_world, 0},
-    {"_rcpp_module_boot_ppm_model", (DL_FUNC) &_rcpp_module_boot_ppm_model, 0},
+    {"_rcpp_module_boot_ppm_simple", (DL_FUNC) &_rcpp_module_boot_ppm_simple, 0},
+    {"_rcpp_module_boot_ppm_decay", (DL_FUNC) &_rcpp_module_boot_ppm_decay, 0},
+    {"_rcpp_module_boot_record_decay", (DL_FUNC) &_rcpp_module_boot_record_decay, 0},
     {"_rcpp_module_boot_unif_module", (DL_FUNC) &_rcpp_module_boot_unif_module, 0},
     {NULL, NULL, 0}
 };
