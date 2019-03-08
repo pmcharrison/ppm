@@ -1,0 +1,14 @@
+Package: ppm
+Type: Package
+Title: What the Package Does in One 'Title Case' Line
+Version: 1.0
+Date: 2019-03-08
+Author: Your Name
+Maintainer: Your Name <your@email.com>
+Description: One paragraph description of what the package does as one or more full sentences.
+License: MIT + file LICENSE
+Imports: 
+    Rcpp
+LinkingTo: Rcpp
+RoxygenNote: 6.1.1
+Encoding: UTF-8
