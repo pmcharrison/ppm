@@ -6,7 +6,7 @@
 using namespace Rcpp;
 
 // rcpp_hello_world
-List rcpp_hello_world();
+std::unordered_map<std::string, std::string> rcpp_hello_world();
 RcppExport SEXP _ppm_rcpp_hello_world() {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -16,8 +16,13 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP _rcpp_module_boot_ppm_model();
+RcppExport SEXP _rcpp_module_boot_unif_module();
+
 static const R_CallMethodDef CallEntries[] = {
     {"_ppm_rcpp_hello_world", (DL_FUNC) &_ppm_rcpp_hello_world, 0},
+    {"_rcpp_module_boot_ppm_model", (DL_FUNC) &_rcpp_module_boot_ppm_model, 0},
+    {"_rcpp_module_boot_unif_module", (DL_FUNC) &_rcpp_module_boot_unif_module, 0},
     {NULL, NULL, 0}
 };
 
