@@ -1,12 +1,24 @@
+// Enable C++11 via this plugin (Rcpp 0.10.3 or later)
+// [[Rcpp::plugins(cpp11)]]
+
+// [[Rcpp::depends(BH)]]
+
 #include <Rcpp.h>
 using namespace Rcpp;
 
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <boost/functional/hash.hpp>
 
-// Enable C++11 via this plugin (Rcpp 0.10.3 or later)
-// [[Rcpp::plugins(cpp11)]]
+typedef std::vector<long int> n_gram;
+
+template <typename Container> // we can make this generic for any container [1]
+struct container_hash {
+  std::size_t operator() (Container const& c) const {
+    return boost::hash_range(c.begin(), c.end());
+  }
+};
 
 class record {
   
@@ -37,20 +49,22 @@ public:
 
 class ppm {
 public:
-  int max_order_bound;
+  int alphabet_size;
+  int order_bound;
   bool shortest_deterministic;
   bool exclusion;
   bool update_exclusion;
   std::string escape;
   
-  ppm(int max_order_bound_,
+  ppm(int alphabet_size_,
+      int order_bound_,
       bool shortest_deterministic_,
       bool exclusion_,
       bool update_exclusion_,
       std::string escape_
   ) {
-    
-    max_order_bound = max_order_bound_;
+    alphabet_size = alphabet_size_;
+    order_bound = order_bound_;
     shortest_deterministic = shortest_deterministic_;
     exclusion = exclusion_;
     update_exclusion = update_exclusion_;
@@ -60,16 +74,20 @@ public:
 
 class ppm_simple: public ppm {
 public:
-  std::unordered_map<long int, record_simple> data;
+  std::unordered_map<n_gram, 
+                     record_simple,
+                     container_hash<n_gram>> data;
   
   ppm_simple(
-    int max_order_bound_,
+    int alphabet_size_,
+    int order_bound_,
     bool shortest_deterministic_,
     bool exclusion_,
     bool update_exclusion_,
     std::string escape_
   ) : ppm(
-      max_order_bound_, 
+      alphabet_size_,
+      order_bound_, 
       shortest_deterministic_, 
       exclusion_, 
       update_exclusion_, 
@@ -77,17 +95,17 @@ public:
     data = {};
   }
   
-  void insert(long int token) {
-    std::unordered_map<long int, record_simple>::const_iterator target = data.find(token);
+  void insert(n_gram x) {
+    std::unordered_map<n_gram, record_simple, container_hash<n_gram>>::const_iterator target = data.find(x);
     if (target == data.end()) {
-      data[token] = record_simple();
+      data[x] = record_simple();
     } else {
-      data[token].add_1();
+      data[x].add_1();
     }
   }
   
-  long int get_count(long int token) {
-    std::unordered_map<long int, record_simple>::const_iterator target = data.find(token);
+  long int get_count(n_gram x) {
+    std::unordered_map<n_gram, record_simple, container_hash<n_gram>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       return(0);
     } else {
@@ -98,7 +116,7 @@ public:
 
 class ppm_decay: public ppm {
 public:
-  std::unordered_map<long int, record_decay> data;
+  std::unordered_map<n_gram, record_decay, container_hash<n_gram>> data;
   
   double buffer_length_time;
   int buffer_length_items;
@@ -109,10 +127,12 @@ public:
   double noise;
   
   ppm_decay(
-    int max_order_bound_,
+    int alphabet_size_,
+    int order_bound_,
     List decay_par
   ) : ppm (
-      max_order_bound_,
+      alphabet_size_,
+      order_bound_,
       false, // shortest_deterministic
       false, // exclusion
       false, // update_exclusion
@@ -127,19 +147,23 @@ public:
     noise = decay_par["noise"];
   }
   
-  void insert(long int token, long int pos, double time) {
-    std::unordered_map<long int, record_decay>::const_iterator target = data.find(token);
+  void insert(n_gram x, long int pos, double time) {
+    std::unordered_map<n_gram, 
+                       record_decay, 
+                       container_hash<n_gram>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       record_decay record;
       record.insert(pos, time);
-      data[token] = record;
+      data[x] = record;
     } else {
-      data[token].insert(pos, time);
+      data[x].insert(pos, time);
     }
   }
   
-  record_decay get_record(long int token) {
-    std::unordered_map<long int, record_decay>::const_iterator target = data.find(token);
+  record_decay get(n_gram x) {
+    std::unordered_map<n_gram, 
+                       record_decay, 
+                       container_hash<n_gram>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       record_decay blank;
       return(blank);
@@ -154,8 +178,9 @@ RCPP_EXPOSED_CLASS(record_decay)
   
   RCPP_MODULE(ppm) {
     class_<ppm>("ppm")
-    .constructor<int, bool, bool, bool, std::string>()
-    .field("max_order_bound", &ppm::max_order_bound)
+    // ppm class cannot be instantiated directly in R
+    .field("alphabet_size", &ppm::alphabet_size)
+    .field("order_bound", &ppm::order_bound)
     .field("shortest_deterministic", &ppm::shortest_deterministic)
     .field("exclusion", &ppm::exclusion)
     .field("update_exclusion", &ppm::update_exclusion)
@@ -164,16 +189,16 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     class_<ppm_simple>("ppm_simple")
       .derives<ppm>("ppm")
-      .constructor<int, bool, bool, bool, std::string>()
+      .constructor<int, int, bool, bool, bool, std::string>()
       .method("insert", &ppm_simple::insert)
       .method("get_count", &ppm_simple::get_count)
     ;
     
     class_<ppm_decay>("ppm_decay")
       .derives<ppm>("ppm")
-      .constructor<int, List>()
+      .constructor<int, int, List>()
       .method("insert", &ppm_decay::insert)
-      .method("get_record", &ppm_decay::get_record)
+      .method("get", &ppm_decay::get)
       .field("buffer_length_time", &ppm_decay::buffer_length_time)
       .field("buffer_length_items", &ppm_decay::buffer_length_items)
       .field("buffer_weight", &ppm_decay::buffer_weight)
