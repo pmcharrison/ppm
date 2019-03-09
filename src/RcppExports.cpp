@@ -5,24 +5,11 @@
 
 using namespace Rcpp;
 
-// rcpp_hello_world
-std::unordered_map<std::string, std::string> rcpp_hello_world();
-RcppExport SEXP _ppm_rcpp_hello_world() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(rcpp_hello_world());
-    return rcpp_result_gen;
-END_RCPP
-}
 
 RcppExport SEXP _rcpp_module_boot_ppm();
-RcppExport SEXP _rcpp_module_boot_unif_module();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_ppm_rcpp_hello_world", (DL_FUNC) &_ppm_rcpp_hello_world, 0},
     {"_rcpp_module_boot_ppm", (DL_FUNC) &_rcpp_module_boot_ppm, 0},
-    {"_rcpp_module_boot_unif_module", (DL_FUNC) &_rcpp_module_boot_unif_module, 0},
     {NULL, NULL, 0}
 };
 

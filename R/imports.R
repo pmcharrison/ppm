@@ -7,7 +7,6 @@ NULL
 #' @import methods
 NULL
 
-Rcpp::loadModule("unif_module", TRUE)
 Rcpp::loadModule("ppm", TRUE)
 
 #' @name ppm

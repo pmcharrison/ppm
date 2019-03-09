@@ -8,33 +8,6 @@ using namespace Rcpp;
 // Enable C++11 via this plugin (Rcpp 0.10.3 or later)
 // [[Rcpp::plugins(cpp11)]]
 
-//' @export
-// [[Rcpp::export]]
-std::unordered_map<std::string, std::string> rcpp_hello_world() {
-  
-  // Create an unordered_map of three strings (that map to strings)
-  std::unordered_map<std::string, std::string> u = {
-    {"RED","#FF0000"},
-    {"GREEN","#00FF00"},
-    {"BLUE","#0000FF"}
-  };
-  
-  // Iterate and print keys and values of unordered_map
-  for( const auto& n : u ) {
-    std::cout << "Key:[" << n.first << "] Value:[" << n.second << "]\n";
-  }
-  
-  // Add two new entries to the unordered_map
-  u["BLACK"] = "#000000";
-  u["WHITE"] = "#FFFFFF";
-  
-  // Output values by key
-  std::cout << "The HEX of color RED is:[" << u["RED"] << "]\n";
-  std::cout << "The HEX of color BLACK is:[" << u["BLACK"] << "]\n";
-  
-  return(u);
-}
-
 class record {
   
 };
@@ -205,34 +178,3 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     
   }
-
-// RCPP_MODULE(record_decay) {
-//   class_<record_decay>("record_decay")
-//   .constructor()
-//   .field("pos", &record_decay::pos)
-//   .field("time", &record_decay::time)
-//   .method("insert", &record_decay::insert)
-//   ;
-// }
-
-class Uniform {
-public:
-  Uniform(double min_, double max_) : min(min_), max(max_) {}
-  NumericVector draw(int n) const {
-    RNGScope scope;
-    return runif( n, min, max );
-  }
-  double min, max;
-};
-double uniformRange( Uniform* w) {
-  return w->max - w->min;
-}
-RCPP_MODULE(unif_module) {
-  class_<Uniform>( "Uniform" )
-  .constructor<double,double>()
-  .field( "min", &Uniform::min )
-  .field( "max", &Uniform::max )
-  .method( "draw", &Uniform::draw )
-  .method( "range", &uniformRange )
-  ;
-}
