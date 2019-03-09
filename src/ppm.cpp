@@ -60,6 +60,8 @@ public:
 
 class ppm_simple: public ppm {
 public:
+  std::unordered_map<long int, record_simple> data;
+  
   ppm_simple(
     int max_order_bound_,
     bool shortest_deterministic_,
@@ -74,9 +76,6 @@ public:
       escape_){
     data = {};
   }
-  
-  int max_order_bound;
-  std::unordered_map<long int, record_simple> data;
   
   void insert(long int token) {
     std::unordered_map<long int, record_simple>::const_iterator target = data.find(token);
@@ -99,26 +98,34 @@ public:
 
 class ppm_decay: public ppm {
 public:
+  std::unordered_map<long int, record_decay> data;
+  
+  double buffer_length_time;
+  int buffer_length_items;
+  double buffer_weight;
+  double stm_half_life;
+  double stm_weight;
+  double ltm_weight;
+  double noise;
+  
   ppm_decay(
-    int max_order_bound_
+    int max_order_bound_,
+    List decay_par
   ) : ppm (
       max_order_bound_,
-      false,
-      false,
-      false,
-      "A"
+      false, // shortest_deterministic
+      false, // exclusion
+      false, // update_exclusion
+      "A" // escape
   ) {
     data = {};
-    // max_order_bound = max_order_bound_;
-    // 
-    // shortest_deterministic = false;
-    // exclusion = false;
-    // update_exclusion = false;
-    // escape = "A";
+    buffer_length_items = decay_par["buffer_length_items"];
+    buffer_weight = decay_par["buffer_weight"];
+    stm_half_life = decay_par["stm_half_life"];
+    stm_weight = decay_par["stm_weight"];
+    ltm_weight = decay_par["ltm_weight"];
+    noise = decay_par["noise"];
   }
-  
-  int max_order_bound;
-  std::unordered_map<long int, record_decay> data;
   
   void insert(long int token, long int pos, double time) {
     std::unordered_map<long int, record_decay>::const_iterator target = data.find(token);
@@ -164,9 +171,16 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     class_<ppm_decay>("ppm_decay")
       .derives<ppm>("ppm")
-      .constructor<int>()
+      .constructor<int, List>()
       .method("insert", &ppm_decay::insert)
       .method("get_record", &ppm_decay::get_record)
+      .field("buffer_length_time", &ppm_decay::buffer_length_time)
+      .field("buffer_length_items", &ppm_decay::buffer_length_items)
+      .field("buffer_weight", &ppm_decay::buffer_weight)
+      .field("stm_half_life", &ppm_decay::stm_half_life)
+      .field("stm_weight", &ppm_decay::stm_weight)
+      .field("ltm_weight", &ppm_decay::ltm_weight)
+      .field("noise", &ppm_decay::noise)
     ;
     
     class_<record_decay>("record_decay")
@@ -175,6 +189,4 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("time", &record_decay::time)
       .method("insert", &record_decay::insert)
     ;
-    
-    
   }
