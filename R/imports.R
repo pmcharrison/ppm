@@ -8,9 +8,7 @@ NULL
 NULL
 
 Rcpp::loadModule("unif_module", TRUE)
-Rcpp::loadModule("ppm_simple", TRUE)
-Rcpp::loadModule("ppm_decay", TRUE)
-Rcpp::loadModule("record_decay", TRUE)
+Rcpp::loadModule("ppm", TRUE)
 
 #' @name ppm_simple
 #' @export

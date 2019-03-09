@@ -116,43 +116,49 @@ public:
   
   record_decay get_record(unsigned long int token) {
     std::unordered_map<unsigned long int, record_decay>::const_iterator target = data.find(token);
+    if (target == data.end()) {
       record_decay blank;
       return(blank);
-    // if (target == data.end()) {
-    //   record_decay blank;
-    //   return(blank);
-    // } else {
-    //   return(target->second);
-    // }
+    } else {
+      return(target->second);
+    }
   }
 };
 
-RCPP_MODULE(ppm_simple) {
+RCPP_EXPOSED_CLASS(record_decay)
+  RCPP_EXPOSED_CLASS(ppm_decay)
+
+RCPP_MODULE(ppm) {
   class_<ppm_simple>("ppm_simple")
   .constructor<int>()
   .field("max_order_bound", &ppm_simple::max_order_bound)
   .method("insert", &ppm_simple::insert)
   .method("get_count", &ppm_simple::get_count)
   ;
-}
 
-RCPP_MODULE(ppm_decay) {
-  class_<ppm_decay>("ppm_decay")
-  .constructor<int>()
-  .field("max_order_bound", &ppm_decay::max_order_bound)
-  .method("insert", &ppm_decay::insert)
-  // .method("get_record", &ppm_decay::get_record)
-  ;
-}
-
-RCPP_MODULE(record_decay) {
   class_<record_decay>("record_decay")
   .constructor()
   .field("pos", &record_decay::pos)
   .field("time", &record_decay::time)
   .method("insert", &record_decay::insert)
   ;
+  
+  class_<ppm_decay>("ppm_decay")
+  .constructor<int>()
+  .field("max_order_bound", &ppm_decay::max_order_bound)
+  .method("insert", &ppm_decay::insert)
+  .method("get_record", &ppm_decay::get_record)
+  ;
 }
+
+// RCPP_MODULE(record_decay) {
+//   class_<record_decay>("record_decay")
+//   .constructor()
+//   .field("pos", &record_decay::pos)
+//   .field("time", &record_decay::time)
+//   .method("insert", &record_decay::insert)
+//   ;
+// }
 
 class Uniform {
 public:
