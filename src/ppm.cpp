@@ -6,12 +6,37 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
+#include <cmath>
 #include <iostream>
+#include <algorithm>
+#include <iterator>
 #include <string>
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
 
-typedef std::vector<long int> n_gram;
+typedef std::vector<long int> sequence;
+
+sequence subseq(sequence x, int first, int last) {
+  int n = x.size();
+  if (first < 0 || last >= n || last < first) {
+    stop("invalid subsequence indices");
+  }
+  sequence res(1 + last - first);
+  for (int j = 0; j < n; j ++) {
+    res[j] = x[j + first];
+  }
+  return(res);
+}
+
+void print(sequence x) {
+  for (int j = 0; j < x.size(); j ++) {
+    if (j > 0) {
+      std::cout << " ";
+    }
+    std::cout << x[j];
+  }
+  std::cout << "\n";
+}
 
 template <typename Container> // we can make this generic for any container [1]
 struct container_hash {
@@ -72,11 +97,62 @@ public:
   }
 };
 
+class symbol_prediction {
+public:
+  long int observed;
+  double information_content;
+  std::vector<double> distribution;
+  
+  symbol_prediction() {
+    observed = 3;
+    information_content = 5.76;
+    distribution.push_back(0.5);
+    distribution.push_back(0.25);
+    distribution.push_back(0.25);
+  }
+};
+
+double compute_entropy(std::vector<double> x) {
+  int n = x.size();
+  double counter = 0;
+  for (int i = 0; i < n; i ++) {
+    double p = x[i];
+    counter += p * log2(p);
+  }
+  return(counter / n);
+}
+
+class sequence_prediction {
+public: 
+  bool return_distribution;
+  bool return_entropy;
+  
+  std::vector<double> information_content;
+  std::vector<double> entropy;
+  std::vector<std::vector<double>> distribution;
+  
+  sequence_prediction(bool return_distribution_,
+                      bool return_entropy_) {
+    return_distribution = return_distribution_;
+    return_entropy = return_entropy_;
+  }
+  
+  void insert(symbol_prediction x) {
+    information_content.push_back(x.information_content);
+    if (return_entropy) {
+      entropy.push_back(compute_entropy(x.distribution));
+    }
+    if (return_distribution) {
+      distribution.push_back(x.distribution);
+    }
+  }
+};
+
 class ppm_simple: public ppm {
 public:
-  std::unordered_map<n_gram, 
+  std::unordered_map<sequence, 
                      record_simple,
-                     container_hash<n_gram>> data;
+                     container_hash<sequence>> data;
   
   ppm_simple(
     int alphabet_size_,
@@ -95,8 +171,8 @@ public:
     data = {};
   }
   
-  void insert(n_gram x) {
-    std::unordered_map<n_gram, record_simple, container_hash<n_gram>>::const_iterator target = data.find(x);
+  void insert(sequence x) {
+    std::unordered_map<sequence, record_simple, container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       data[x] = record_simple();
     } else {
@@ -104,19 +180,66 @@ public:
     }
   }
   
-  long int get_count(n_gram x) {
-    std::unordered_map<n_gram, record_simple, container_hash<n_gram>>::const_iterator target = data.find(x);
+  long int get_count(sequence x) {
+    std::unordered_map<sequence, record_simple, container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       return(0);
     } else {
       return(target->second.count);
     }
   }
+  
+  sequence_prediction model_seq(sequence x,
+                                bool train = true,
+                                bool predict = true,
+                                bool return_distribution = true,
+                                bool return_entropy = true) {
+    int n = x.size();
+    sequence_prediction result(return_entropy, 
+                               return_distribution);
+    for (int i = 0; i <= n; i ++) { // predicting symbol i (inc. terminal)
+      if (train && i > 0) {
+        int min = std::max(0, i - order_bound);
+        int max = i - 1;
+        for (int j = min; j <= max; j ++) {
+          sequence n_gram(x.begin() + j,
+                          x.begin() + max + 1);
+          this->insert(n_gram);
+        }
+      }
+      if (predict && i < n) {
+        long int symbol = x[i];
+        
+        sequence context = i < 1 ? sequence() :
+          subseq(x, 
+                 std::max(0, i - order_bound), 
+                 i - 1);
+        
+        symbol_prediction y = predict_symbol(symbol, context);
+        result.insert(predict_symbol(symbol, context));
+        // return(this->predict_symbol(symbol, context));
+        // return(1);
+        
+        // std::vector<float> y;
+        // y.push_back(1);
+        // // return(Rcpp::wrap(y));
+      }
+    }
+    // symbol_prediction out;
+    return(result);
+    // return(result);
+  }
+  
+  symbol_prediction predict_symbol(long int symbol, sequence context) {
+    // return(symbol_prediction({1, 2, 3, 4}));
+    symbol_prediction out;
+    return(out);
+  }
 };
 
 class ppm_decay: public ppm {
 public:
-  std::unordered_map<n_gram, record_decay, container_hash<n_gram>> data;
+  std::unordered_map<sequence, record_decay, container_hash<sequence>> data;
   
   double buffer_length_time;
   int buffer_length_items;
@@ -147,10 +270,10 @@ public:
     noise = decay_par["noise"];
   }
   
-  void insert(n_gram x, long int pos, double time) {
-    std::unordered_map<n_gram, 
+  void insert(sequence x, long int pos, double time) {
+    std::unordered_map<sequence, 
                        record_decay, 
-                       container_hash<n_gram>>::const_iterator target = data.find(x);
+                       container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       record_decay record;
       record.insert(pos, time);
@@ -160,10 +283,10 @@ public:
     }
   }
   
-  record_decay get(n_gram x) {
-    std::unordered_map<n_gram, 
+  record_decay get(sequence x) {
+    std::unordered_map<sequence, 
                        record_decay, 
-                       container_hash<n_gram>>::const_iterator target = data.find(x);
+                       container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       record_decay blank;
       return(blank);
@@ -175,23 +298,34 @@ public:
 
 RCPP_EXPOSED_CLASS(record_decay)
   RCPP_EXPOSED_CLASS(ppm_decay)
+  RCPP_EXPOSED_CLASS(symbol_prediction)
+  RCPP_EXPOSED_CLASS(sequence_prediction)
   
   RCPP_MODULE(ppm) {
-    class_<ppm>("ppm")
-    // ppm class cannot be instantiated directly in R
-    .field("alphabet_size", &ppm::alphabet_size)
-    .field("order_bound", &ppm::order_bound)
-    .field("shortest_deterministic", &ppm::shortest_deterministic)
-    .field("exclusion", &ppm::exclusion)
-    .field("update_exclusion", &ppm::update_exclusion)
-    .field("escape", &ppm::escape)
+    class_<symbol_prediction>("symbol_prediction")
+    .constructor()
+    .field("distribution", &symbol_prediction::distribution)
     ;
+    
+    class_<sequence_prediction>("sequence_prediction")
+      ;
+    
+    class_<ppm>("ppm")
+      // ppm class cannot be instantiated directly in R
+      .field("alphabet_size", &ppm::alphabet_size)
+      .field("order_bound", &ppm::order_bound)
+      .field("shortest_deterministic", &ppm::shortest_deterministic)
+      .field("exclusion", &ppm::exclusion)
+      .field("update_exclusion", &ppm::update_exclusion)
+      .field("escape", &ppm::escape)
+      ;
     
     class_<ppm_simple>("ppm_simple")
       .derives<ppm>("ppm")
       .constructor<int, int, bool, bool, bool, std::string>()
       .method("insert", &ppm_simple::insert)
       .method("get_count", &ppm_simple::get_count)
+      .method("model_seq", &ppm_simple::model_seq)
     ;
     
     class_<ppm_decay>("ppm_decay")
