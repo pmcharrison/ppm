@@ -38,6 +38,12 @@ void print(sequence x) {
   std::cout << "\n";
 }
 
+RObject list_to_tibble(List x) {
+  Environment pkg = Environment::namespace_env("tibble");
+  Function f = pkg["as_tibble"];
+  return(f(x));
+}
+
 template <typename Container> // we can make this generic for any container [1]
 struct container_hash {
   std::size_t operator() (Container const& c) const {
@@ -51,14 +57,18 @@ class record {
 
 class record_simple: public record {
 public: 
-  record_simple() : count(1) {}
+  long int count;
+  
+  record_simple() {
+    count = 1;
+  }
+  
   void add_1() {
     if (count >= LONG_MAX) {
       stop("cannot increment this record count any higher");
     }
     count += 1;
   }
-  long int count;
 };
 
 class record_decay: public record {
@@ -119,7 +129,7 @@ double compute_entropy(std::vector<double> x) {
     double p = x[i];
     counter += p * log2(p);
   }
-  return(counter / n);
+  return(- counter / n);
 }
 
 class sequence_prediction {
@@ -162,10 +172,7 @@ public:
   }
   
   RObject as_tibble() {
-    Environment pkg = Environment::namespace_env("tibble");
-    Function f = pkg["as_tibble"];
-    List x = this->as_list();
-    return(f(x));
+    return(list_to_tibble(this->as_list()));
   }
 };
 
@@ -208,6 +215,27 @@ public:
     } else {
       return(target->second.count);
     }
+  }
+  
+  List as_list() {
+    int n = data.size();
+    List n_gram;
+    NumericVector count(n);
+    
+    int i = 0;
+    for(auto kv : data) {
+      n_gram.push_back(kv.first);
+      count[i] = kv.second.count;
+      i ++;
+    } 
+    
+    List x = List::create(Named("n_gram") = n_gram,
+                          Named("count") = count);
+    return(x);
+  }
+  
+  RObject as_tibble() {
+    return(list_to_tibble(this->as_list()));
   }
   
   sequence_prediction model_seq(sequence x,
@@ -332,7 +360,6 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("information_content", &sequence_prediction::information_content)
       .field("entropy", &sequence_prediction::entropy)
       .field("distribution", &sequence_prediction::distribution)
-      .method("as_list", &sequence_prediction::as_list)
       .method("as_tibble", &sequence_prediction::as_tibble)
     ;
     
@@ -352,6 +379,7 @@ RCPP_EXPOSED_CLASS(record_decay)
       .method("insert", &ppm_simple::insert)
       .method("get_count", &ppm_simple::get_count)
       .method("model_seq", &ppm_simple::model_seq)
+      .method("as_tibble", &ppm_simple::as_tibble)
     ;
     
     class_<ppm_decay>("ppm_decay")
