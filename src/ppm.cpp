@@ -246,7 +246,7 @@ public:
     int n = x.size();
     sequence_prediction result(return_entropy, 
                                return_distribution);
-    for (int i = 0; i <= n; i ++) { // predicting symbol i (inc. terminal)
+    for (int i = 0; i <= n; i ++) { // predicting symbol i
       if (train && i > 0) {
         int min = std::max(0, i - order_bound);
         int max = i - 1;
@@ -266,21 +266,12 @@ public:
         
         symbol_prediction y = predict_symbol(symbol, context);
         result.insert(predict_symbol(symbol, context));
-        // return(this->predict_symbol(symbol, context));
-        // return(1);
-        
-        // std::vector<float> y;
-        // y.push_back(1);
-        // // return(Rcpp::wrap(y));
       }
     }
-    // symbol_prediction out;
     return(result);
-    // return(result);
   }
   
   symbol_prediction predict_symbol(int symbol, sequence context) {
-    // return(symbol_prediction({1, 2, 3, 4}));
     symbol_prediction out;
     return(out);
   }
