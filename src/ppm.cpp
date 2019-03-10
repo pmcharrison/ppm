@@ -220,7 +220,7 @@ public:
   List as_list() {
     int n = data.size();
     List n_gram;
-    NumericVector count(n);
+    NumericVector count(n); // NumericVector deals better with v long ints
     
     int i = 0;
     for(auto kv : data) {
@@ -343,6 +343,31 @@ public:
       return(target->second);
     }
   }
+  
+  List as_list() {
+    int n = data.size();
+    List n_gram;
+    List pos(n);
+    List time(n);
+    
+    int i = 0;
+    for(auto kv : data) {
+      n_gram.push_back(kv.first);
+      pos.push_back(kv.second.pos);
+      time.push_back(kv.second.time);
+      i ++;
+    } 
+    
+    List x = List::create(Named("n_gram") = n_gram,
+                          Named("pos") = pos,
+                          Named("time") = time);
+    return(x);
+  }
+  
+  RObject as_tibble() {
+    return(list_to_tibble(this->as_list()));
+  }
+  
 };
 
 RCPP_EXPOSED_CLASS(record_decay)
