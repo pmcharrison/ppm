@@ -60,7 +60,7 @@ public:
   long int count;
   
   record_simple() {
-    count = 1;
+    count = 1; 
   }
   
   void add_1() {
@@ -71,39 +71,24 @@ public:
   }
 };
 
+double compute_entropy(std::vector<double> x) {
+  int n = x.size();
+  double counter = 0;
+  for (int i = 0; i < n; i ++) {
+    double p = x[i];
+    counter += p * log2(p);
+  }
+  return(- counter / n);
+}
+
 class record_decay: public record {
 public:
   record_decay() {}
-  std::vector<long int> pos;
+  std::vector<int> pos;
   std::vector<double> time;
-  void insert(long int pos_, double time_) {
+  void insert(int pos_, double time_) {
     pos.push_back(pos_);
     time.push_back(time_);
-  }
-};
-
-class ppm {
-public:
-  int alphabet_size;
-  int order_bound;
-  bool shortest_deterministic;
-  bool exclusion;
-  bool update_exclusion;
-  std::string escape;
-  
-  ppm(int alphabet_size_,
-      int order_bound_,
-      bool shortest_deterministic_,
-      bool exclusion_,
-      bool update_exclusion_,
-      std::string escape_
-  ) {
-    alphabet_size = alphabet_size_;
-    order_bound = order_bound_;
-    shortest_deterministic = shortest_deterministic_;
-    exclusion = exclusion_;
-    update_exclusion = update_exclusion_;
-    escape = escape_;
   }
 };
 
@@ -121,16 +106,6 @@ public:
     distribution.push_back(0.25);
   }
 };
-
-double compute_entropy(std::vector<double> x) {
-  int n = x.size();
-  double counter = 0;
-  for (int i = 0; i < n; i ++) {
-    double p = x[i];
-    counter += p * log2(p);
-  }
-  return(- counter / n);
-}
 
 class sequence_prediction {
 public: 
@@ -176,6 +151,79 @@ public:
   }
 };
 
+class ppm {
+public:
+  int alphabet_size;
+  int order_bound;
+  bool shortest_deterministic;
+  bool exclusion;
+  bool update_exclusion;
+  std::string escape;
+  
+  ppm(int alphabet_size_,
+      int order_bound_,
+      bool shortest_deterministic_,
+      bool exclusion_,
+      bool update_exclusion_,
+      std::string escape_
+  ) {
+    alphabet_size = alphabet_size_;
+    order_bound = order_bound_;
+    shortest_deterministic = shortest_deterministic_;
+    exclusion = exclusion_;
+    update_exclusion = update_exclusion_;
+    escape = escape_;
+  }
+  
+  virtual ~ ppm() {}
+  
+  virtual void insert(sequence x, int pos, double time);
+  
+  sequence_prediction model_seq(sequence x,
+                                IntegerVector pos = IntegerVector(0),
+                                NumericVector time = NumericVector(0),
+                                bool train = true,
+                                bool predict = true,
+                                bool return_distribution = true,
+                                bool return_entropy = true) {
+    int n = x.size();
+    if (pos.size() != time.size()) {
+      stop("pos and time must have the same length");
+    }
+    bool decay = pos.size() > 0;
+    if (decay && x.size() != pos.size()) {
+      stop("pos and time must either have length 0 or have length equal to x");
+    }
+    sequence_prediction result(return_entropy, 
+                               return_distribution);
+    
+    for (int i = 0; i < n; i ++) {
+      int pos_i = decay? pos[i] : 0;
+      int time_i = decay? time[i] : 0;
+      // Predict
+      if (predict) {
+        sequence context = i < 1 ? sequence() :
+          subseq(x, 
+                 std::max(0, i - order_bound), 
+                 i - 1);
+        result.insert(predict_symbol(x[i], context));
+      }
+      // Train
+      if (train) {
+        for (int h = std::max(0, i - order_bound); h <= i; h ++) {
+          this->insert(subseq(x, h, i), pos_i, time_i);
+        }
+      }
+    }
+    return(result);
+  }
+  
+  symbol_prediction predict_symbol(int symbol, sequence context) {
+    symbol_prediction out;
+    return(out);
+  }
+};
+
 class ppm_simple: public ppm {
 public:
   std::unordered_map<sequence, 
@@ -199,7 +247,9 @@ public:
     data = {};
   }
   
-  void insert(sequence x) {
+  ~ ppm_simple() {}
+  
+  void insert(sequence x, int pos, double time) {
     std::unordered_map<sequence, record_simple, container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       data[x] = record_simple();
@@ -237,44 +287,7 @@ public:
   RObject as_tibble() {
     return(list_to_tibble(this->as_list()));
   }
-  
-  sequence_prediction model_seq(sequence x,
-                                bool train = true,
-                                bool predict = true,
-                                bool return_distribution = true,
-                                bool return_entropy = true) {
-    int n = x.size();
-    sequence_prediction result(return_entropy, 
-                               return_distribution);
-    for (int i = 0; i <= n; i ++) { // predicting symbol i
-      if (train && i > 0) {
-        int min = std::max(0, i - order_bound);
-        int max = i - 1;
-        for (int j = min; j <= max; j ++) {
-          sequence n_gram(x.begin() + j,
-                          x.begin() + max + 1);
-          this->insert(n_gram);
-        }
-      }
-      if (predict && i < n) {
-        int symbol = x[i];
-        
-        sequence context = i < 1 ? sequence() :
-          subseq(x, 
-                 std::max(0, i - order_bound), 
-                 i - 1);
-        
-        symbol_prediction y = predict_symbol(symbol, context);
-        result.insert(predict_symbol(symbol, context));
-      }
-    }
-    return(result);
-  }
-  
-  symbol_prediction predict_symbol(int symbol, sequence context) {
-    symbol_prediction out;
-    return(out);
-  }
+
 };
 
 class ppm_decay: public ppm {
@@ -310,7 +323,9 @@ public:
     noise = decay_par["noise"];
   }
   
-  void insert(sequence x, long int pos, double time) {
+  ~ ppm_decay() {}
+  
+  void insert(sequence x, int pos, double time) {
     std::unordered_map<sequence, 
                        record_decay, 
                        container_hash<sequence>>::const_iterator target = data.find(x);
@@ -387,6 +402,7 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("exclusion", &ppm::exclusion)
       .field("update_exclusion", &ppm::update_exclusion)
       .field("escape", &ppm::escape)
+      .method("model_seq", &ppm_simple::model_seq)
       ;
     
     class_<ppm_simple>("ppm_simple")
@@ -394,7 +410,6 @@ RCPP_EXPOSED_CLASS(record_decay)
       .constructor<int, int, bool, bool, bool, std::string>()
       .method("insert", &ppm_simple::insert)
       .method("get_count", &ppm_simple::get_count)
-      .method("model_seq", &ppm_simple::model_seq)
       .method("as_tibble", &ppm_simple::as_tibble)
     ;
     
