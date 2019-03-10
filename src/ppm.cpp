@@ -175,9 +175,9 @@ public:
     escape = escape_;
   }
   
-  virtual ~ ppm() {}
+  virtual ~ ppm() {};
   
-  virtual void insert(sequence x, int pos, double time);
+  virtual void insert(sequence x, int pos, double time) {};
   
   sequence_prediction model_seq(sequence x,
                                 IntegerVector pos = IntegerVector(0),
@@ -194,17 +194,17 @@ public:
     if (decay && x.size() != pos.size()) {
       stop("pos and time must either have length 0 or have length equal to x");
     }
-    sequence_prediction result(return_entropy, 
+    sequence_prediction result(return_entropy,
                                return_distribution);
-    
+
     for (int i = 0; i < n; i ++) {
       int pos_i = decay? pos[i] : 0;
       int time_i = decay? time[i] : 0;
       // Predict
       if (predict) {
         sequence context = i < 1 ? sequence() :
-          subseq(x, 
-                 std::max(0, i - order_bound), 
+          subseq(x,
+                 std::max(0, i - order_bound),
                  i - 1);
         result.insert(predict_symbol(x[i], context));
       }
@@ -221,7 +221,7 @@ public:
   symbol_prediction predict_symbol(int symbol, sequence context) {
     symbol_prediction out;
     return(out);
-  }
+  } 
 };
 
 class ppm_simple: public ppm {
@@ -247,7 +247,7 @@ public:
     data = {};
   }
   
-  ~ ppm_simple() {}
+  ~ ppm_simple() {};
   
   void insert(sequence x, int pos, double time) {
     std::unordered_map<sequence, record_simple, container_hash<sequence>>::const_iterator target = data.find(x);
@@ -323,7 +323,7 @@ public:
     noise = decay_par["noise"];
   }
   
-  ~ ppm_decay() {}
+  ~ ppm_decay() {};
   
   void insert(sequence x, int pos, double time) {
     std::unordered_map<sequence, 
@@ -402,21 +402,20 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("exclusion", &ppm::exclusion)
       .field("update_exclusion", &ppm::update_exclusion)
       .field("escape", &ppm::escape)
-      .method("model_seq", &ppm_simple::model_seq)
+      .method("model_seq", &ppm::model_seq)
+      .method("insert", &ppm::insert)
       ;
-    
+
     class_<ppm_simple>("ppm_simple")
       .derives<ppm>("ppm")
       .constructor<int, int, bool, bool, bool, std::string>()
-      .method("insert", &ppm_simple::insert)
       .method("get_count", &ppm_simple::get_count)
       .method("as_tibble", &ppm_simple::as_tibble)
     ;
-    
+
     class_<ppm_decay>("ppm_decay")
       .derives<ppm>("ppm")
       .constructor<int, int, List>()
-      .method("insert", &ppm_decay::insert)
       .method("get", &ppm_decay::get)
       .field("buffer_length_time", &ppm_decay::buffer_length_time)
       .field("buffer_length_items", &ppm_decay::buffer_length_items)
@@ -426,7 +425,7 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("ltm_weight", &ppm_decay::ltm_weight)
       .field("noise", &ppm_decay::noise)
     ;
-    
+
     class_<record_decay>("record_decay")
       .constructor()
       .field("pos", &record_decay::pos)
