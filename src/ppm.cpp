@@ -14,7 +14,7 @@ using namespace Rcpp;
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
 
-typedef std::vector<long int> sequence;
+typedef std::vector<int> sequence;
 
 sequence subseq(sequence x, int first, int last) {
   int n = x.size();
@@ -99,12 +99,12 @@ public:
 
 class symbol_prediction {
 public:
-  long int observed;
+  int symbol;
   double information_content;
   std::vector<double> distribution;
   
   symbol_prediction() {
-    observed = 3;
+    symbol = 3;
     information_content = 5.76;
     distribution.push_back(0.5);
     distribution.push_back(0.25);
@@ -127,6 +127,7 @@ public:
   bool return_distribution;
   bool return_entropy;
   
+  std::vector<int> symbol;
   std::vector<double> information_content;
   std::vector<double> entropy;
   std::vector<std::vector<double>> distribution;
@@ -138,6 +139,7 @@ public:
   }
   
   void insert(symbol_prediction x) {
+    symbol.push_back(x.symbol);
     information_content.push_back(x.information_content);
     if (return_entropy) {
       entropy.push_back(compute_entropy(x.distribution));
@@ -145,6 +147,25 @@ public:
     if (return_distribution) {
       distribution.push_back(x.distribution);
     }
+  }
+  
+  List as_list() {
+    List x = List::create(Named("symbol") = symbol,
+                          Named("information_content") = information_content);
+    if (return_entropy) {
+      x.push_back(entropy, "entropy");
+    }
+    if (return_distribution) {
+      x.push_back(distribution, "distribution");
+    }
+    return(x);
+  }
+  
+  RObject as_tibble() {
+    Environment pkg = Environment::namespace_env("tibble");
+    Function f = pkg["as_tibble"];
+    List x = this->as_list();
+    return(f(x));
   }
 };
 
@@ -208,7 +229,7 @@ public:
         }
       }
       if (predict && i < n) {
-        long int symbol = x[i];
+        int symbol = x[i];
         
         sequence context = i < 1 ? sequence() :
           subseq(x, 
@@ -230,7 +251,7 @@ public:
     // return(result);
   }
   
-  symbol_prediction predict_symbol(long int symbol, sequence context) {
+  symbol_prediction predict_symbol(int symbol, sequence context) {
     // return(symbol_prediction({1, 2, 3, 4}));
     symbol_prediction out;
     return(out);
@@ -308,7 +329,12 @@ RCPP_EXPOSED_CLASS(record_decay)
     ;
     
     class_<sequence_prediction>("sequence_prediction")
-      ;
+      .field("information_content", &sequence_prediction::information_content)
+      .field("entropy", &sequence_prediction::entropy)
+      .field("distribution", &sequence_prediction::distribution)
+      .method("as_list", &sequence_prediction::as_list)
+      .method("as_tibble", &sequence_prediction::as_tibble)
+    ;
     
     class_<ppm>("ppm")
       // ppm class cannot be instantiated directly in R
