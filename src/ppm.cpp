@@ -95,15 +95,26 @@ public:
 class symbol_prediction {
 public:
   int symbol;
-  double information_content;
+  int pos;
+  double time;
   std::vector<double> distribution;
+  double information_content;
   
-  symbol_prediction() {
-    symbol = 3;
-    information_content = 5.76;
-    distribution.push_back(0.5);
-    distribution.push_back(0.25);
-    distribution.push_back(0.25);
+  symbol_prediction(int symbol_, 
+                    int pos_, 
+                    double time_, 
+                    std::vector<double> &distribution_) {
+    int dist_size_ = distribution_.size();
+    if (symbol_ > dist_size_) {
+      std::cout << "symbol = " << symbol_ << ", distribution(n) = " << distribution_.size() << "\n";
+      stop("observed symbol not compatible with distribution dimensions");
+    }
+    
+    symbol = symbol_;
+    pos = pos_;
+    time = time_;
+    distribution = distribution_;
+    information_content = - log2(distribution[symbol]);
   }
 };
 
@@ -111,16 +122,21 @@ class sequence_prediction {
 public: 
   bool return_distribution;
   bool return_entropy;
+  bool decay;
   
   std::vector<int> symbol;
+  std::vector<int> pos;
+  std::vector<double> time;
   std::vector<double> information_content;
   std::vector<double> entropy;
   std::vector<std::vector<double>> distribution;
   
   sequence_prediction(bool return_distribution_,
-                      bool return_entropy_) {
+                      bool return_entropy_,
+                      bool decay_) {
     return_distribution = return_distribution_;
     return_entropy = return_entropy_;
+    decay = decay_;
   }
   
   void insert(symbol_prediction x) {
@@ -132,11 +148,19 @@ public:
     if (return_distribution) {
       distribution.push_back(x.distribution);
     }
+    if (decay) {
+      pos.push_back(x.pos);
+      time.push_back(x.time);
+    }
   }
   
   List as_list() {
-    List x = List::create(Named("symbol") = symbol,
-                          Named("information_content") = information_content);
+    List x = List::create(Named("symbol") = symbol);
+    if (decay) {
+      x.push_back(pos, "pos");
+      x.push_back(time, "time");
+    }
+    x.push_back(information_content, "information_content");
     if (return_entropy) {
       x.push_back(entropy, "entropy");
     }
@@ -160,6 +184,8 @@ public:
   bool update_exclusion;
   std::string escape;
   
+  int num_observations = 0;
+  
   ppm(int alphabet_size_,
       int order_bound_,
       bool shortest_deterministic_,
@@ -180,25 +206,22 @@ public:
   virtual void insert(sequence x, int pos, double time) {};
   
   sequence_prediction model_seq(sequence x,
-                                IntegerVector pos = IntegerVector(0),
                                 NumericVector time = NumericVector(0),
                                 bool train = true,
                                 bool predict = true,
                                 bool return_distribution = true,
                                 bool return_entropy = true) {
     int n = x.size();
-    if (pos.size() != time.size()) {
-      stop("pos and time must have the same length");
-    }
-    bool decay = pos.size() > 0;
-    if (decay && x.size() != pos.size()) {
-      stop("pos and time must either have length 0 or have length equal to x");
+    bool decay = time.size() > 0;
+    if (decay && x.size() != time.size()) {
+      stop("time must either have length 0 or have length equal to x");
     }
     sequence_prediction result(return_entropy,
-                               return_distribution);
+                               return_distribution,
+                               decay);
 
     for (int i = 0; i < n; i ++) {
-      int pos_i = decay? pos[i] : 0;
+      int pos_i = num_observations;
       double time_i = decay? time[i] : 0;
       // Predict
       if (predict) {
@@ -206,22 +229,45 @@ public:
           subseq(x,
                  std::max(0, i - order_bound),
                  i - 1);
-        result.insert(predict_symbol(x[i], context));
+        result.insert(predict_symbol(x[i], context, pos_i, time_i));
       }
       // Train
       if (train) {
         for (int h = std::max(0, i - order_bound); h <= i; h ++) {
           this->insert(subseq(x, h, i), pos_i, time_i);
         }
+        num_observations ++;
       }
     }
     return(result);
   }
   
-  symbol_prediction predict_symbol(int symbol, sequence context) {
-    symbol_prediction out;
+  symbol_prediction predict_symbol(int symbol, sequence context,
+                                   int pos, double time) {
+    if (symbol < 0) {
+      stop("symbols must be greater than or equal to 0");
+    }
+    if (symbol > alphabet_size - 1) {
+      stop("symbols cannot exceed (alphabet_size - 1)");
+    }
+    
+    std::vector<double> distribution(alphabet_size, 0.0);
+    distribution[0] = 0.5;
+    distribution[1] = 0.25;
+    distribution[2] = 0.25;
+    
+    symbol_prediction out(symbol, pos, time, distribution);
     return(out);
-  } 
+  }
+  
+  std::vector<double> get_probability_distribution(int pos, double time) {
+    
+  }
+  
+  std::vector<double> get_smoothed_distribution(int order, int pos, double time,
+                                                bool excluded) {
+    
+  }
 };
 
 class ppm_simple: public ppm {
@@ -382,11 +428,6 @@ RCPP_EXPOSED_CLASS(record_decay)
   RCPP_EXPOSED_CLASS(sequence_prediction)
   
   RCPP_MODULE(ppm) {
-    class_<symbol_prediction>("symbol_prediction")
-    .constructor()
-    .field("distribution", &symbol_prediction::distribution)
-    ;
-    
     class_<sequence_prediction>("sequence_prediction")
       .field("information_content", &sequence_prediction::information_content)
       .field("entropy", &sequence_prediction::entropy)
