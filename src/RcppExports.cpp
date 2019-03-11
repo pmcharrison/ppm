@@ -6,10 +6,12 @@
 using namespace Rcpp;
 
 
+RcppExport SEXP run_testthat_tests();
 RcppExport SEXP _rcpp_module_boot_ppm();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_ppm", (DL_FUNC) &_rcpp_module_boot_ppm, 0},
+    {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 0},
     {NULL, NULL, 0}
 };
 

@@ -9,7 +9,7 @@ Description: One paragraph description of what the package does as one or more f
 License: MIT + file LICENSE
 Imports: 
     Rcpp, BH
-LinkingTo: Rcpp, BH
+LinkingTo: Rcpp, BH, testthat
 RoxygenNote: 6.1.1
 Encoding: UTF-8
 SystemRequirements: C++11
