@@ -97,12 +97,14 @@ public:
   int symbol;
   int pos;
   double time;
+  int model_order;
   std::vector<double> distribution;
   double information_content;
   
   symbol_prediction(int symbol_, 
                     int pos_, 
                     double time_, 
+                    int model_order_,
                     std::vector<double> &distribution_) {
     int dist_size_ = distribution_.size();
     if (symbol_ > dist_size_) {
@@ -113,6 +115,7 @@ public:
     symbol = symbol_;
     pos = pos_;
     time = time_;
+    model_order = model_order_;
     distribution = distribution_;
     information_content = - log2(distribution[symbol]);
   }
@@ -127,6 +130,7 @@ public:
   std::vector<int> symbol;
   std::vector<int> pos;
   std::vector<double> time;
+  std::vector<int> model_order;
   std::vector<double> information_content;
   std::vector<double> entropy;
   std::vector<std::vector<double>> distribution;
@@ -141,6 +145,7 @@ public:
   
   void insert(symbol_prediction x) {
     symbol.push_back(x.symbol);
+    model_order.push_back(x.model_order);
     information_content.push_back(x.information_content);
     if (return_entropy) {
       entropy.push_back(compute_entropy(x.distribution));
@@ -160,6 +165,7 @@ public:
       x.push_back(pos, "pos");
       x.push_back(time, "time");
     }
+    x.push_back(model_order, "model_order");
     x.push_back(information_content, "information_content");
     if (return_entropy) {
       x.push_back(entropy, "entropy");
@@ -172,6 +178,24 @@ public:
   
   RObject as_tibble() {
     return(list_to_tibble(this->as_list()));
+  }
+};
+
+class model_order {
+public:
+  int chosen;
+  bool deterministic_any;
+  int deterministic_shortest;
+  bool deterministic_is_selected;
+
+  model_order(int chosen_,
+              bool deterministic_any_,
+              int deterministic_shortest_, 
+              bool deterministic_is_selected_) {
+    chosen = chosen_;
+    deterministic_any = deterministic_any_;
+    deterministic_shortest = deterministic_shortest_;
+    deterministic_is_selected = deterministic_is_selected_;
   }
 };
 
@@ -204,6 +228,10 @@ public:
   virtual ~ ppm() {};
   
   virtual void insert(sequence x, int pos, double time) {};
+  
+  virtual double get_weight(sequence n_gram, int pos, double time) {
+    return 0;
+  };
   
   sequence_prediction model_seq(sequence x,
                                 NumericVector time = NumericVector(0),
@@ -251,12 +279,14 @@ public:
       stop("symbols cannot exceed (alphabet_size - 1)");
     }
     
+    model_order model_order = this->get_model_order(context, pos, time);
+    
     std::vector<double> distribution(alphabet_size, 0.0);
     distribution[0] = 0.5;
     distribution[1] = 0.25;
     distribution[2] = 0.25;
     
-    symbol_prediction out(symbol, pos, time, distribution);
+    symbol_prediction out(symbol, pos, time, model_order.chosen, distribution);
     return(out);
   }
   
@@ -268,6 +298,89 @@ public:
                                                 bool excluded) {
     
   }
+  
+  model_order get_model_order(sequence context, int pos, double time) {
+    // int longest_available = this->get_longest_context(context);
+    int chosen = static_cast<int>(context.size());
+    
+    int det_shortest = - 1;
+    int det_any = false;
+    int det_is_selected = false;
+    
+    if (shortest_deterministic) {
+      int det_shortest = this->get_shortest_deterministic_context(context,
+                                                                  pos,
+                                                                  time);
+      bool det_any = det_shortest >= 0;
+      if (det_any) {
+        if (det_shortest < chosen) {
+          det_is_selected = true;
+          chosen = det_shortest;
+        }
+      }
+    }
+    
+    return(model_order(chosen, det_any, det_shortest, det_is_selected));
+  }
+  
+  int get_shortest_deterministic_context(sequence context, int pos, double time) {
+    int len = static_cast<int>(context.size());
+    int res = -1;
+    for (int order = 0; order <= std::min(len, order_bound); order ++) {
+      sequence effective_context = order == 0 ? sequence() : subseq(context, 
+                                                         len - order, len - 1);
+      if (is_deterministic_context(effective_context, pos, time)) {
+        res = order;
+        break;
+      }
+    }
+    return(res);
+  }
+  
+  bool is_deterministic_context(sequence context, int pos, double time) {
+    int num_continuations = 0;
+    for (int i = 0; i < alphabet_size; i ++) {
+      sequence n_gram = context;
+      n_gram.push_back(i);
+      double weight = this->get_weight(n_gram, pos, time);
+      if (weight > 0) {
+        num_continuations ++;
+        if (num_continuations > 1) {
+          break;
+        }
+      }
+    }
+    return num_continuations == 1;
+  }
+  
+  // I don't think get_longest_context is necessary.
+  // We can just start with the full context we have available,
+  // and the model will escape down to lower levels if 
+  // it doesn't find any counts.
+  
+  // int get_longest_context(sequence context) {
+  //   int context_len = static_cast<int>(context.size());
+  //   int max_order = std::min(order_bound, context_len);
+  // 
+  //   
+  //   
+  //   for (int order = max_order; order >= 0; order --) {
+  //     sequence x = order == 0 ? sequence() : subseq(context, 
+  //                                        context_len - order, 
+  //                                        context_len - 1);
+  //     bool 
+  //     
+  //     
+  //     // Check that context exists in the tree
+  //     
+  //     // Check that context has a continuation
+  //     return(order);
+  //   }
+  //   return(- 1);
+  //   
+  // }
+  
+
 };
 
 class ppm_simple: public ppm {
@@ -303,6 +416,10 @@ public:
       data[x].add_1();
     }
   }
+  
+  double get_weight(sequence n_gram, int pos, double time) {
+    return static_cast<double>(this->get_count(n_gram));
+  };
   
   long int get_count(sequence x) {
     std::unordered_map<sequence, record_simple, container_hash<sequence>>::const_iterator target = data.find(x);
@@ -383,6 +500,12 @@ public:
       data[x].insert(pos, time);
     }
   }
+  
+  double get_weight(sequence n_gram, int pos, double time) {
+    record_decay record = this->get(n_gram);
+    double weight = static_cast<double>(record.pos.size());
+    return(weight);
+  };
   
   record_decay get(sequence x) {
     std::unordered_map<sequence, 
