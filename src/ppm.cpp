@@ -88,17 +88,19 @@ class record {
 
 class record_simple: public record {
 public: 
-  long int count;
+  long int full_count = 0;
+  long int up_ex_count = 0;
   
-  record_simple() {
-    count = 1; 
-  }
+  record_simple() {};
   
-  void add_1() {
-    if (count >= LONG_MAX) {
+  void add_1(bool full_only) {
+    if (full_count >= LONG_MAX || up_ex_count >= LONG_MAX) {
       stop("cannot increment this record count any higher");
     }
-    count += 1;
+    full_count ++;
+    if (!full_only) {
+      up_ex_count ++;
+    }
   }
 };
 
@@ -273,7 +275,11 @@ public:
   
   virtual ~ ppm() {};
   
-  virtual void insert(sequence x, int pos, double time) {};
+  // returns true if the n_gram already existed in the memory bank
+  virtual bool insert(sequence x, int pos, double time, bool full_only) {
+    stop("this shouldn't happen");
+    return true;
+  };
   
   virtual double get_weight(sequence n_gram, 
                             int pos, 
@@ -310,8 +316,9 @@ public:
       }
       // Train
       if (train) {
+        bool full_only = false;
         for (int h = std::max(0, i - order_bound); h <= i; h ++) {
-          this->insert(subseq(x, h, i), pos_i, time_i);
+          full_only = this->insert(subseq(x, h, i), pos_i, time_i, full_only);
         }
         num_observations ++;
       }
@@ -665,12 +672,16 @@ public:
   
   ~ ppm_simple() {};
   
-  void insert(sequence x, int pos, double time) {
+  bool insert(sequence x, int pos, double time, bool full_only) {
     std::unordered_map<sequence, record_simple, container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
-      data[x] = record_simple();
+      record_simple record;
+      record.add_1(full_only);
+      data[x] = record;
+      return false;
     } else {
-      data[x].add_1();
+      data[x].add_1(full_only);
+      return true;
     }
   }
   
@@ -678,32 +689,37 @@ public:
                     int pos, 
                     double time,
                     bool update_excluded) {
-    return static_cast<double>(this->get_count(n_gram));
+    return static_cast<double>(this->get_count(n_gram, update_excluded));
   };
   
-  long int get_count(sequence x) {
+  long int get_count(sequence x, bool update_excluded) {
     std::unordered_map<sequence, record_simple, container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       return(0);
+    } else if (update_excluded) {
+      return target->second.up_ex_count;
     } else {
-      return(target->second.count);
+      return target->second.full_count;
     }
   }
   
   List as_list() {
     int n = data.size();
     List n_gram(n);
-    NumericVector count(n); // NumericVector deals better with v long ints
+    NumericVector full_count(n); // NumericVector deals better with v long ints
+    NumericVector up_ex_count(n);
     
     int i = 0;
     for(auto kv : data) {
       n_gram[i] = kv.first;
-      count[i] = kv.second.count;
+      full_count[i] = kv.second.full_count;
+      up_ex_count[i] = kv.second.up_ex_count;
       i ++;
     } 
     
     List x = List::create(Named("n_gram") = n_gram,
-                          Named("count") = count);
+                          Named("full_count") = full_count,
+                          Named("up_ex_count") = up_ex_count);
     return(x);
   }
   
@@ -748,7 +764,7 @@ public:
   
   ~ ppm_decay() {};
   
-  void insert(sequence x, int pos, double time) {
+  bool insert(sequence x, int pos, double time, bool full_only) {
     std::unordered_map<sequence, 
                        record_decay, 
                        container_hash<sequence>>::const_iterator target = data.find(x);
@@ -756,8 +772,10 @@ public:
       record_decay record;
       record.insert(pos, time);
       data[x] = record;
+      return false;
     } else {
       data[x].insert(pos, time);
+      return true;
     }
   }
   
