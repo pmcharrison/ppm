@@ -17,11 +17,11 @@ using namespace Rcpp;
 typedef std::vector<int> sequence;
 
 sequence subseq(sequence x, int first, int last) {
-  int n = x.size();
-  if (first < 0 || last >= n || last < first) {
+  if (first < 0 || last >= x.size() || last < first) {
     stop("invalid subsequence indices");
   }
-  sequence res(1 + last - first);
+  int n = 1 + last - first;
+  sequence res(n);
   for (int j = 0; j < n; j ++) {
     res[j] = x[j + first];
   }
@@ -211,7 +211,6 @@ public:
       // Train
       if (train) {
         for (int h = std::max(0, i - order_bound); h <= i; h ++) {
-          std::cout << "h = " << h << ", i = " << i << "\n";
           this->insert(subseq(x, h, i), pos_i, time_i);
         }
       }
