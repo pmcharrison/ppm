@@ -1,28 +1,27 @@
 library(ppm)
 library(tidyverse)
 
-x <- new(ppm:::ppm,
-         alphabet_size = 10,
+x <- new(ppm_simple,
+         alphabet_size = 200,
          order_bound = 10, 
-         shortest_deterministic = TRUE,
+         shortest_deterministic = FALSE,
          exclusion = TRUE,
-         update_exclusion = TRUE,
-         escape = new(escape_a))
-x$escape$lambda(1:5, 15)
+         update_exclusion = FALSE,
+         escape = "c")
 
-x <- ppm:::test_ppm()
+abra <- as.integer(factor(c("a", "b", "r", "a", "c", "a", "d", "a", "b", "r", "a") )) - 1L
 
-x$escape
-x$escape$lambda(1:5, 15)
+y <- x$model_seq(sample(0:19, size = 10000, replace = TRUE),
+                 time = numeric(10000),
+                 train = TRUE, 
+                 predict = TRUE, 
+                 keep_distribution = FALSE, 
+                 keep_entropy = FALSE)
+y$distribution
 
 
-x$escape
 
-y <- new(ppm:::escape_b)
-y
-y$k
 
-y$lambda(1:5, 15)
 
 x <- new(ppm_simple, 
          alphabet_size = 10,
@@ -30,9 +29,7 @@ x <- new(ppm_simple,
          shortest_deterministic = TRUE,
          exclusion = TRUE,
          update_exclusion = TRUE,
-         escape = new(escape_a))
-
-x$escape$lambda(1:5, 15)
+         escape = "a")
 
 y <- x$model_seq(sample(0:9, size = 30, replace = TRUE), 
                  time = numeric(),

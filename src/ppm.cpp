@@ -9,6 +9,7 @@ using namespace Rcpp;
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <functional>
 #include <iterator>
 #include <string>
 #include <unordered_map>
@@ -242,132 +243,6 @@ public:
   }
 };
 
-class escape_method {
-public:
-  double k;
-  
-  escape_method() {
-    k = 0;
-  }
-  
-  escape_method(double k_) {
-    k = k_;
-  }
-  
-  virtual ~ escape_method() {};
-  
-  virtual double lambda(std::vector<double> counts, 
-                        double context_count) {
-    stop("running virtual escape method - this should never happen");
-    return 0.123;
-  }
-  double modify_count(double count) {
-    if (this->k == 0 || count == 0) {
-      return count;
-    } else {
-      double x = count + this->k;
-      if (x > 0) {
-        return x;
-      } else {
-        return 0;
-      }
-    }
-  }
-  
-  int count_positive_values(std::vector<double> x) {
-    int n = static_cast<int>(x.size());
-    int res = 0;
-    for (int i = 0; i < n; i ++) {
-      if (x[i] > 0) {
-        res ++;
-      }
-    }
-    return res;
-  }
-};
-
-class escape_a: public escape_method {
-public:
-  escape_a() : escape_method(0) {}
-  
-  virtual ~ escape_a() {};
-  
-  double lambda(std::vector<double> counts, 
-                double context_count) {
-    return static_cast<double>(context_count) / 
-      (static_cast<double>(context_count) + 1.0);
-  }
-};
-
-class escape_b: public escape_method {
-public:
-  escape_b() : escape_method(-1) {}
-  
-  virtual ~ escape_b() {};
-  
-  double lambda(std::vector<double> counts, 
-                double context_count) {
-    int num_distinct_symbols = this->count_positive_values(counts);
-    return static_cast<double>(context_count) / 
-      static_cast<double>(context_count + num_distinct_symbols);
-  }
-};
-
-class escape_c: public escape_method {
-public:
-  escape_c() : escape_method(0) {}
-  
-  virtual ~ escape_c() {};
-  
-  double lambda(std::vector<double> counts, 
-                double context_count) {
-    int num_distinct_symbols = this->count_positive_values(counts);
-    return static_cast<double>(context_count) / 
-      static_cast<double>(context_count + num_distinct_symbols);
-  }
-};
-
-class escape_d: public escape_method {
-public:
-  escape_d() : escape_method(- 0.5) {}
-  
-  virtual ~ escape_d() {};
-  
-  double lambda(std::vector<double> counts, 
-                double context_count) {
-    int num_distinct_symbols = this->count_positive_values(counts);
-    return static_cast<double>(context_count) / 
-      (static_cast<double>(context_count + num_distinct_symbols) / 2.0);
-  }
-};
-
-class escape_ax: public escape_method {
-public:
-  escape_ax() : escape_method(0) {}
-  
-  virtual ~ escape_ax() {};
-  
-  double lambda(std::vector<double> counts, 
-                double context_count) {
-    // We generalise the definition of singletons to decayed counts between
-    // 0 and 1. This is a bit hacky though, and the escape method
-    // should ultimately be reconfigured for new decay functions.
-    return static_cast<double>(context_count) /
-      static_cast<double>(context_count + num_singletons(counts));
-  }
-private:
-  int num_singletons(std::vector<double> x) {
-    int n = static_cast<int>(x.size());
-    int res = 0;
-    for (int i = 0; i < n; i ++) {
-      if (x[i] > 0 && x[i] <= 1) {
-        res ++;
-      }
-    }
-    return res;
-  }
-};
-
 class ppm {
 public:
   int alphabet_size;
@@ -375,7 +250,8 @@ public:
   bool shortest_deterministic;
   bool exclusion;
   bool update_exclusion;
-  escape_method escape;
+  std::string escape;
+  double k;
   
   int num_observations = 0;
   
@@ -384,7 +260,7 @@ public:
       bool shortest_deterministic_,
       bool exclusion_,
       bool update_exclusion_,
-      escape_method escape_
+      std::string escape_
   ) {
     alphabet_size = alphabet_size_;
     order_bound = order_bound_;
@@ -392,6 +268,7 @@ public:
     exclusion = exclusion_;
     update_exclusion = update_exclusion_;
     escape = escape_;
+    k = this->get_k(escape);
   }
   
   virtual ~ ppm() {};
@@ -497,18 +374,18 @@ public:
       std::vector<int> n_gram = last_n(context, order);
       n_gram.resize(order + 1);
       
-      std::cout << "n_gram = ";
-      print(n_gram);
+      // std::cout << "n_gram = ";
+      // print(n_gram);
       
       std::vector<double> counts(this->alphabet_size);
       for (int i = 0; i < this->alphabet_size; i ++) {
         n_gram[order] = i;
         counts[i] = this->get_weight(n_gram, pos, time, update_excluded);
-        counts[i] = this->escape.modify_count(counts[i]);
+        counts[i] = this->modify_count(counts[i]);
       }
       
-      std::cout << "counts = ";
-      print(counts);
+      // std::cout << "counts = ";
+      // print(counts);
       
       double context_count = 0;
       for (int i = 0; i < this->alphabet_size; i ++) {
@@ -516,15 +393,15 @@ public:
           context_count += counts[i];
         }
       }
-
-      std::cout << "context_count = " << context_count << "\n";
+      
+      // std::cout << "context_count = " << context_count << "\n";
       double lambda = get_lambda(counts, context_count);
       
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
-      std::cout << "order = " << order << ", lambda = " << lambda << "\n";
-      std::cout << "alphas = ";
-      print(alphas);
-      std::cout << "\n";
+      // std::cout << "order = " << order << ", lambda = " << lambda << "\n";
+      // std::cout << "alphas = ";
+      // print(alphas);
+      // std::cout << "\n";
       
       if (this->exclusion) {
         for (int i = 0; i < alphabet_size; i ++) {
@@ -565,13 +442,105 @@ public:
   // introduced by Pearce (2005)'s decision to introduce exclusion
   // (see 6.2.3.3), though the thesis does not mention
   // this explicitly.
-  double get_lambda(std::vector<double> counts, 
-                    double context_count) {
+  double get_lambda(std::vector<double> counts, double context_count) {
+    std::string e = this->escape;
     if (context_count <= 0) {
       return 0.0;
+    } else if (e == "a") {
+      return this->lambda_a(counts, context_count);
+    } else if (e == "b") {
+      return this->lambda_b(counts, context_count);
+    } else if (e == "c") {
+      return this->lambda_c(counts, context_count);
+    } else if (e == "d") {
+      return this->lambda_d(counts, context_count);
+    } else if (e == "ax") {
+      return this->lambda_ax(counts, context_count);
     } else {
-      return this->escape.lambda(counts, context_count);
+      stop("unrecognised escape method");
     }
+  }
+  
+  double get_k(std::string e) {
+    if (e == "a") {
+      return 0;
+    } else if (e == "b") {
+      return - 1;
+    } else if (e == "c") {
+      return 0;
+    } else if (e == "d") {
+      return - 0.5;
+    } else if (e == "ax") {
+      return 0;
+    } else {
+      stop("unrecognised escape method");
+    }
+  }
+  
+  double lambda_a(std::vector<double> counts, double context_count) {
+    return static_cast<double>(context_count) /
+      (static_cast<double>(context_count) + 1.0);
+  }
+  
+  double lambda_b(std::vector<double> counts, double context_count) {
+    int num_distinct_symbols = this->count_positive_values(counts);
+    return static_cast<double>(context_count) /
+      static_cast<double>(context_count + num_distinct_symbols);
+  }
+  
+  double lambda_c(std::vector<double> counts, double context_count) {
+    int num_distinct_symbols = this->count_positive_values(counts);
+    return static_cast<double>(context_count) /
+      static_cast<double>(context_count + num_distinct_symbols);
+  }
+  
+  double lambda_d(std::vector<double> counts, double context_count) {
+    int num_distinct_symbols = this->count_positive_values(counts);
+    return static_cast<double>(context_count) /
+      (static_cast<double>(context_count + num_distinct_symbols) / 2.0);
+  }
+  
+  double lambda_ax(std::vector<double> counts, double context_count) {
+    // We generalise the definition of singletons to decayed counts between
+    // 0 and 1. This is a bit hacky though, and the escape method
+    // should ultimately be reconfigured for new decay functions.
+    return static_cast<double>(context_count) /
+      static_cast<double>(context_count + num_singletons(counts));
+  }
+  
+  int num_singletons(std::vector<double> x) {
+    int n = static_cast<int>(x.size());
+    int res = 0;
+    for (int i = 0; i < n; i ++) {
+      if (x[i] > 0 && x[i] <= 1) {
+        res ++;
+      }
+    }
+    return res;
+  }
+  
+  double modify_count(double count) {
+    if (this->k == 0 || count == 0) {
+      return count;
+    } else {
+      double x = count + this->k;
+      if (x > 0) {
+        return x;
+      } else {
+        return 0;
+      }
+    }
+  }
+  
+  int count_positive_values(std::vector<double> x) {
+    int n = static_cast<int>(x.size());
+    int res = 0;
+    for (int i = 0; i < n; i ++) {
+      if (x[i] > 0) {
+        res ++;
+      }
+    }
+    return res;
   }
   
   std::vector<double> get_order_minus_1_distribution(std::vector<bool> excluded) {
@@ -642,36 +611,34 @@ public:
     }
     return num_continuations == 1;
   }
-  
-  // I don't think get_longest_context is necessary.
-  // We can just start with the full context we have available,
-  // and the model will escape down to lower levels if 
-  // it doesn't find any counts.
-  
-  // int get_longest_context(sequence context) {
-  //   int context_len = static_cast<int>(context.size());
-  //   int max_order = std::min(order_bound, context_len);
-  // 
-  //   
-  //   
-  //   for (int order = max_order; order >= 0; order --) {
-  //     sequence x = order == 0 ? sequence() : subseq(context, 
-  //                                        context_len - order, 
-  //                                        context_len - 1);
-  //     bool 
-  //     
-  //     
-  //     // Check that context exists in the tree
-  //     
-  //     // Check that context has a continuation
-  //     return(order);
-  //   }
-  //   return(- 1);
-  //   
-  // }
-  
-  
 };
+
+// I don't think get_longest_context is necessary.
+// We can just start with the full context we have available,
+// and the model will escape down to lower levels if 
+// it doesn't find any counts.
+
+// int get_longest_context(sequence context) {
+//   int context_len = static_cast<int>(context.size());
+//   int max_order = std::min(order_bound, context_len);
+// 
+//   
+//   
+//   for (int order = max_order; order >= 0; order --) {
+//     sequence x = order == 0 ? sequence() : subseq(context, 
+//                                        context_len - order, 
+//                                        context_len - 1);
+//     bool 
+//     
+//     
+//     // Check that context exists in the tree
+//     
+//     // Check that context has a continuation
+//     return(order);
+//   }
+//   return(- 1);
+//   
+// }
 
 class ppm_simple: public ppm {
 public:
@@ -685,7 +652,7 @@ public:
     bool shortest_deterministic_,
     bool exclusion_,
     bool update_exclusion_,
-    escape_method escape_
+    std::string escape_
   ) : ppm(
       alphabet_size_,
       order_bound_, 
@@ -768,7 +735,7 @@ public:
       false, // shortest_deterministic
       false, // exclusion
       false, // update_exclusion
-      escape_a() // escape
+      "a" // escape
   ) {
     data = {};
     buffer_length_items = decay_par["buffer_length_items"];
@@ -841,15 +808,15 @@ public:
   
 };
 
-ppm test_ppm() {
-  escape_a esc;
-  return ppm(10, // alphabet size
-             10, // order bound
-             true, //shortest deterministic
-             true, // exclusion
-             true, // update_exclusion
-             esc);
-}
+// ppm test_ppm() {
+//   escape_a esc;
+//   return ppm(10, // alphabet size
+//              10, // order bound
+//              true, //shortest deterministic
+//              true, // exclusion
+//              true, // update_exclusion
+//              esc);
+// }
 
 RCPP_EXPOSED_CLASS(record_decay)
   RCPP_EXPOSED_CLASS(ppm)
@@ -857,7 +824,6 @@ RCPP_EXPOSED_CLASS(record_decay)
   RCPP_EXPOSED_CLASS(ppm_decay)
   RCPP_EXPOSED_CLASS(symbol_prediction)
   RCPP_EXPOSED_CLASS(sequence_prediction)
-  RCPP_EXPOSED_CLASS(escape_method)
   
   RCPP_MODULE(ppm) {
     class_<sequence_prediction>("sequence_prediction")
@@ -867,40 +833,9 @@ RCPP_EXPOSED_CLASS(record_decay)
     .method("as_tibble", &sequence_prediction::as_tibble)
     ;
     
-    class_<escape_method>("escape_method")
-      .field("k", &escape_method::k)
-      .method("lambda", &escape_method::lambda)
-      .method("modify_count", &escape_method::modify_count)
-    ;
-    
-    class_<escape_a>("escape_a")
-      .derives<escape_method>("escape_method")
-      .constructor()
-    ;
-    
-    class_<escape_b>("escape_b")
-      .derives<escape_method>("escape_method")
-      .constructor()
-    ;
-    // 
-    // class_<escape_c>("escape_a")
-    //   .derives<escape_method>("escape_method")
-    //   .constructor()
-    // ;
-    // 
-    // class_<escape_d>("escape_a")
-    //   .derives<escape_method>("escape_method")
-    //   .constructor()
-    // ;
-    // 
-    // class_<escape_ax>("escape_a")
-    //   .derives<escape_method>("escape_method")
-    //   .constructor()
-    // ;
-    
     class_<ppm>("ppm")
       // ppm class cannot be instantiated directly in R
-      .constructor<int, int, bool, bool, bool, escape_method>()
+      .constructor<int, int, bool, bool, bool, std::string>()
       .field("alphabet_size", &ppm::alphabet_size)
       .field("order_bound", &ppm::order_bound)
       .field("shortest_deterministic", &ppm::shortest_deterministic)
@@ -913,7 +848,7 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     class_<ppm_simple>("ppm_simple")
       .derives<ppm>("ppm")
-      .constructor<int, int, bool, bool, bool, escape_method>()
+      .constructor<int, int, bool, bool, bool, std::string>()
       .method("get_count", &ppm_simple::get_count)
       .method("as_tibble", &ppm_simple::as_tibble)
     ;
@@ -939,6 +874,4 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("time", &record_decay::time)
       .method("insert", &record_decay::insert)
     ;
-    
-    function("test_ppm", &test_ppm);
   }
