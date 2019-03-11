@@ -38,13 +38,14 @@ sequence last_n (sequence x, int n) {
   }
   if (n == 0) {
     sequence res(0);
+    return res;
   } else {
     sequence res(n);
     for (int i = 0; i < n; i ++) {
       res[i] = x[i + original_length - n];
     }
+    return res;
   }
-  return res;
 }
 
 void print(sequence x) {
@@ -242,15 +243,19 @@ public:
                         double context_count) {
     return 0;
   }
-  virtual double modify_count(double count) {
-    if (this.k == 0 || count == 0) {
+  double modify_count(double count) {
+    if (this->k == 0 || count == 0) {
       return count;
     } else {
-      return std::max(count + k, 0);
+      double x = count + this->k;
+      if (x > 0) {
+        return x;
+      } else {
+        return 0;
+      }
     }
   }
   
-private: 
   int count_positive_values(std::vector<double> x) {
     int n = static_cast<int>(x.size());
     int res = 0;
@@ -259,7 +264,7 @@ private:
         res ++;
       }
     }
-    return res
+    return res;
   }
 };
 
@@ -323,7 +328,7 @@ private:
     int res = 0;
     for (int i = 0; i < n; i ++) {
       if (x[i] > 0 && x[i] <= 1) {
-        res ++
+        res ++;
       }
     }
     return res;
@@ -347,7 +352,7 @@ public:
       bool exclusion_,
       bool update_exclusion_,
       escape_method escape_
-  ) {
+  ) : escape(0) {
     alphabet_size = alphabet_size_;
     order_bound = order_bound_;
     shortest_deterministic = shortest_deterministic_;
@@ -360,7 +365,10 @@ public:
   
   virtual void insert(sequence x, int pos, double time) {};
   
-  virtual double get_weight(sequence n_gram, int pos, double time) {
+  virtual double get_weight(sequence n_gram, 
+                            int pos, 
+                            double time, 
+                            bool update_excluded) {
     return 0;
   };
   
@@ -436,7 +444,7 @@ public:
     return normalise_distribution(dist);
   }
   
-  std::vector<double> get_smoothed_distribution(context,
+  std::vector<double> get_smoothed_distribution(std::vector<int> context,
                                                 model_order model_order, 
                                                 int order,
                                                 int pos, 
@@ -445,26 +453,26 @@ public:
     if (order == -1) {
       return get_order_minus_1_distribution(excluded);
     } else {
-      bool update_excluded = this.update_exclusion;
+      bool update_excluded = this->update_exclusion;
       if (order == model_order.chosen &&
-          this.shortest_deterministic &&
-          this.update_exclusion &&
-          model_order.det_is_selected) {
+          this->shortest_deterministic &&
+          this->update_exclusion &&
+          model_order.deterministic_is_selected) {
         update_excluded = false;
       }
       
       std::vector<int> n_gram = last_n(context, order);
       n_gram.resize(order + 1);
       
-      std::vector<double> counts(this.alphabet_size);
-      for (int i = 0; i < this.alphabet_size; i ++) {
+      std::vector<double> counts(this->alphabet_size);
+      for (int i = 0; i < this->alphabet_size; i ++) {
         n_gram[order] = i;
         counts[i] = this->get_weight(n_gram, pos, time, update_excluded);
         counts[i] = this->escape.modify_count(counts[i]);
       }
       
       double context_count = 0;
-      for (int i = 0; i < this.alphabet_size; i ++) {
+      for (int i = 0; i < this->alphabet_size; i ++) {
         if (!excluded[i]) {
           context_count += counts[i];
         }
@@ -473,7 +481,7 @@ public:
       double lambda = get_lambda(counts, context_count);
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
       
-      if (this.exclusion) {
+      if (this->exclusion) {
         for (int i = 0; i < alphabet_size; i ++) {
           if (alphas[i] > 0) {
             excluded[i] = true;
@@ -484,10 +492,12 @@ public:
       std::vector<double> lower_order_distribution = get_smoothed_distribution(
         context, model_order, order - 1, pos, time, excluded);
       
-      std::vector<double> res(this.alphabet_size);
-      for (int i = 0; i < this.alphabet_size; i ++) {
+      std::vector<double> res(this->alphabet_size);
+      for (int i = 0; i < this->alphabet_size; i ++) {
         res[i] = alphas[i] + (1 - lambda) * lower_order_distribution[i];
       }
+      
+      return res;
     }
   }
   
@@ -495,14 +505,15 @@ public:
                                 std::vector<double> counts, 
                                 double context_count) {
     if (lambda > 0) {
-      std::vector<double> res(this.alphabet_size);
-      for (int i = 0; i < this.alphabet_size; i ++) {
+      std::vector<double> res(this->alphabet_size);
+      for (int i = 0; i < this->alphabet_size; i ++) {
         res[i] = lambda * counts[i] / context_count;
       }
+      return res;
     } else {
-      std::vector<double> res(this.alphabet_size, 0);
+      std::vector<double> res(this->alphabet_size, 0);
+      return res;
     }
-    return res;
   }
   
   // The need to capture situations where the context_count is 0 is
@@ -520,14 +531,14 @@ public:
   
   std::vector<double> get_order_minus_1_distribution(std::vector<bool> excluded) {
     int num_observed_symbols = 0;
-    for (int i = 0; i < this.alphabet_size; i ++) {
+    for (int i = 0; i < this->alphabet_size; i ++) {
       if (excluded[i]) {
         num_observed_symbols ++;
       } 
     }
-    double p = 1 / (this.alphabet_size + 1 - num_observed_symbols);
-    std::vector<double> res(this.alphabet_size, p);
-    return res
+    double p = 1 / (this->alphabet_size + 1 - num_observed_symbols);
+    std::vector<double> res(this->alphabet_size, p);
+    return res;
   }
   
   model_order get_model_order(sequence context, int pos, double time) {
@@ -648,7 +659,10 @@ public:
     }
   }
   
-  double get_weight(sequence n_gram, int pos, double time) {
+  double get_weight(sequence n_gram, 
+                    int pos, 
+                    double time,
+                    bool update_excluded) {
     return static_cast<double>(this->get_count(n_gram));
   };
   
@@ -732,7 +746,10 @@ public:
     }
   }
   
-  double get_weight(sequence n_gram, int pos, double time) {
+  double get_weight(sequence n_gram, 
+                    int pos, 
+                    double time,
+                    bool update_excluded) {
     record_decay record = this->get(n_gram);
     double weight = static_cast<double>(record.pos.size());
     return(weight);
@@ -796,7 +813,6 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("shortest_deterministic", &ppm::shortest_deterministic)
       .field("exclusion", &ppm::exclusion)
       .field("update_exclusion", &ppm::update_exclusion)
-      .field("escape", &ppm::escape)
       .method("model_seq", &ppm::model_seq)
       .method("insert", &ppm::insert)
       ;
