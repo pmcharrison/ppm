@@ -28,6 +28,25 @@ sequence subseq(sequence x, int first, int last) {
   return(res);
 }
 
+sequence last_n (sequence x, int n) {
+  if (n < 0) {
+    stop("n cannot be less than 0");
+  }
+  int original_length = static_cast<int>(x.size());
+  if (n > original_length) {
+    stop("cannot excise more elements than the sequence contains");
+  }
+  if (n == 0) {
+    sequence res(0);
+  } else {
+    sequence res(n);
+    for (int i = 0; i < n; i ++) {
+      res[i] = x[i + original_length - n];
+    }
+  }
+  return res;
+}
+
 void print(sequence x) {
   for (int j = 0; j < x.size(); j ++) {
     if (j > 0) {
@@ -79,6 +98,18 @@ double compute_entropy(std::vector<double> x) {
     counter += p * log2(p);
   }
   return(- counter / n);
+}
+
+std::vector<double> normalise_distribution(std::vector<double> x) {
+  double total = 0;
+  int n = static_cast<int>(x.size());
+  for (int i = 0; i < n; i ++) {
+    total += x[i];
+  }
+  for (int i = 0; i < n; i ++) {
+    x[i] = x[i] / total;
+  }
+  return x;
 }
 
 class record_decay: public record {
@@ -187,7 +218,7 @@ public:
   bool deterministic_any;
   int deterministic_shortest;
   bool deterministic_is_selected;
-
+  
   model_order(int chosen_,
               bool deterministic_any_,
               int deterministic_shortest_, 
@@ -199,6 +230,106 @@ public:
   }
 };
 
+class escape_method {
+public:
+  double k;
+  
+  escape_method(double k_) {
+    k = k_;
+  }
+  
+  virtual double lambda(std::vector<double> counts, 
+                        double context_count) {
+    return 0;
+  }
+  virtual double modify_count(double count) {
+    if (this.k == 0 || count == 0) {
+      return count;
+    } else {
+      return std::max(count + k, 0);
+    }
+  }
+  
+private: 
+  int count_positive_values(std::vector<double> x) {
+    int n = static_cast<int>(x.size());
+    int res = 0;
+    for (int i = 0; i < n; i ++) {
+      if (x[i] > 0) {
+        res ++;
+      }
+    }
+    return res
+  }
+};
+
+class escape_a: public escape_method {
+public:
+  escape_a() : escape_method(0) {}
+  
+  double lambda(std::vector<double> counts, 
+                double context_count) {
+    return context_count / (context_count + 1);
+  }
+};
+
+class escape_b: public escape_method {
+public:
+  escape_b() : escape_method(-1) {}
+  
+  double lambda(std::vector<double> counts, 
+                double context_count) {
+    int num_distinct_symbols = this->count_positive_values(counts);
+    return context_count / (context_count + num_distinct_symbols);
+  }
+};
+
+class escape_c: public escape_method {
+public:
+  escape_c() : escape_method(0) {}
+  
+  double lambda(std::vector<double> counts, 
+                double context_count) {
+    int num_distinct_symbols = this->count_positive_values(counts);
+    return context_count / (context_count + num_distinct_symbols);
+  }
+};
+
+class escape_d: public escape_method {
+public:
+  escape_d() : escape_method(- 0.5) {}
+  
+  double lambda(std::vector<double> counts, 
+                double context_count) {
+    int num_distinct_symbols = this->count_positive_values(counts);
+    return context_count / (context_count + num_distinct_symbols / 2);
+  }
+};
+
+class escape_ax: public escape_method {
+public:
+  escape_ax() : escape_method(0) {}
+  
+  double lambda(std::vector<double> counts, 
+                double context_count) {
+    // We generalise the definition of singletons to decayed counts between
+    // 0 and 1. This is a bit hacky though, and the escape method
+    // should ultimately be reconfigured for new decay functions.
+    return context_count / (context_count + num_singletons(counts));
+  }
+private:
+  int num_singletons(std::vector<double> x) {
+    int n = static_cast<int>(x.size());
+    int res = 0;
+    for (int i = 0; i < n; i ++) {
+      if (x[i] > 0 && x[i] <= 1) {
+        res ++
+      }
+    }
+    return res;
+  }
+};
+
 class ppm {
 public:
   int alphabet_size;
@@ -206,7 +337,7 @@ public:
   bool shortest_deterministic;
   bool exclusion;
   bool update_exclusion;
-  std::string escape;
+  escape_method escape;
   
   int num_observations = 0;
   
@@ -215,7 +346,7 @@ public:
       bool shortest_deterministic_,
       bool exclusion_,
       bool update_exclusion_,
-      std::string escape_
+      escape_method escape_
   ) {
     alphabet_size = alphabet_size_;
     order_bound = order_bound_;
@@ -247,16 +378,16 @@ public:
     sequence_prediction result(return_entropy,
                                return_distribution,
                                decay);
-
+    
     for (int i = 0; i < n; i ++) {
       int pos_i = num_observations;
       double time_i = decay? time[i] : 0;
       // Predict
       if (predict) {
         sequence context = (i < 1 || order_bound < 1) ? sequence() :
-          subseq(x,
-                 std::max(0, i - order_bound),
-                 i - 1);
+        subseq(x,
+               std::max(0, i - order_bound),
+               i - 1);
         result.insert(predict_symbol(x[i], context, pos_i, time_i));
       }
       // Train
@@ -280,23 +411,123 @@ public:
     }
     
     model_order model_order = this->get_model_order(context, pos, time);
+    std::vector<double> dist = get_probability_distribution(context,
+                                                            model_order,
+                                                            pos,
+                                                            time);
     
-    std::vector<double> distribution(alphabet_size, 0.0);
-    distribution[0] = 0.5;
-    distribution[1] = 0.25;
-    distribution[2] = 0.25;
-    
-    symbol_prediction out(symbol, pos, time, model_order.chosen, distribution);
+    symbol_prediction out(symbol, pos, time, model_order.chosen, dist);
     return(out);
+  } 
+  
+  std::vector<double> get_probability_distribution(sequence context,
+                                                   model_order model_order,
+                                                   int pos, 
+                                                   double time) {
+    std::vector<bool> excluded(alphabet_size, false);
+    std::vector<double> dist = get_smoothed_distribution(
+      context,
+      model_order,
+      model_order.chosen,
+      pos,
+      time,
+      excluded
+    );
+    return normalise_distribution(dist);
   }
   
-  std::vector<double> get_probability_distribution(int pos, double time) {
-    
+  std::vector<double> get_smoothed_distribution(context,
+                                                model_order model_order, 
+                                                int order,
+                                                int pos, 
+                                                double time,
+                                                std::vector<bool> excluded) {
+    if (order == -1) {
+      return get_order_minus_1_distribution(excluded);
+    } else {
+      bool update_excluded = this.update_exclusion;
+      if (order == model_order.chosen &&
+          this.shortest_deterministic &&
+          this.update_exclusion &&
+          model_order.det_is_selected) {
+        update_excluded = false;
+      }
+      
+      std::vector<int> n_gram = last_n(context, order);
+      n_gram.resize(order + 1);
+      
+      std::vector<double> counts(this.alphabet_size);
+      for (int i = 0; i < this.alphabet_size; i ++) {
+        n_gram[order] = i;
+        counts[i] = this->get_weight(n_gram, pos, time, update_excluded);
+        counts[i] = this->escape.modify_count(counts[i]);
+      }
+      
+      double context_count = 0;
+      for (int i = 0; i < this.alphabet_size; i ++) {
+        if (!excluded[i]) {
+          context_count += counts[i];
+        }
+      }
+
+      double lambda = get_lambda(counts, context_count);
+      std::vector<double> alphas = get_alphas(lambda, counts, context_count);
+      
+      if (this.exclusion) {
+        for (int i = 0; i < alphabet_size; i ++) {
+          if (alphas[i] > 0) {
+            excluded[i] = true;
+          }
+        }
+      }
+      
+      std::vector<double> lower_order_distribution = get_smoothed_distribution(
+        context, model_order, order - 1, pos, time, excluded);
+      
+      std::vector<double> res(this.alphabet_size);
+      for (int i = 0; i < this.alphabet_size; i ++) {
+        res[i] = alphas[i] + (1 - lambda) * lower_order_distribution[i];
+      }
+    }
   }
   
-  std::vector<double> get_smoothed_distribution(int order, int pos, double time,
-                                                bool excluded) {
-    
+  std::vector<double>get_alphas(double lambda, 
+                                std::vector<double> counts, 
+                                double context_count) {
+    if (lambda > 0) {
+      std::vector<double> res(this.alphabet_size);
+      for (int i = 0; i < this.alphabet_size; i ++) {
+        res[i] = lambda * counts[i] / context_count;
+      }
+    } else {
+      std::vector<double> res(this.alphabet_size, 0);
+    }
+    return res;
+  }
+  
+  // The need to capture situations where the context_count is 0 is
+  // introduced by Pearce (2005)'s decision to introduce exclusion
+  // (see 6.2.3.3), though the thesis does not mention
+  // this explicitly.
+  double get_lambda(std::vector<double> counts, 
+                    double context_count) {
+    if (context_count <= 0) {
+      return 0;
+    } else {
+      return this->escape.lambda(counts, context_count);
+    }
+  }
+  
+  std::vector<double> get_order_minus_1_distribution(std::vector<bool> excluded) {
+    int num_observed_symbols = 0;
+    for (int i = 0; i < this.alphabet_size; i ++) {
+      if (excluded[i]) {
+        num_observed_symbols ++;
+      } 
+    }
+    double p = 1 / (this.alphabet_size + 1 - num_observed_symbols);
+    std::vector<double> res(this.alphabet_size, p);
+    return res
   }
   
   model_order get_model_order(sequence context, int pos, double time) {
@@ -380,7 +611,7 @@ public:
   //   
   // }
   
-
+  
 };
 
 class ppm_simple: public ppm {
@@ -395,7 +626,7 @@ public:
     bool shortest_deterministic_,
     bool exclusion_,
     bool update_exclusion_,
-    std::string escape_
+    escape_method escape_
   ) : ppm(
       alphabet_size_,
       order_bound_, 
@@ -450,7 +681,7 @@ public:
   RObject as_tibble() {
     return(list_to_tibble(this->as_list()));
   }
-
+  
 };
 
 class ppm_decay: public ppm {
@@ -475,7 +706,7 @@ public:
       false, // shortest_deterministic
       false, // exclusion
       false, // update_exclusion
-      "A" // escape
+      escape_a() // escape
   ) {
     data = {};
     buffer_length_items = decay_par["buffer_length_items"];
@@ -552,10 +783,10 @@ RCPP_EXPOSED_CLASS(record_decay)
   
   RCPP_MODULE(ppm) {
     class_<sequence_prediction>("sequence_prediction")
-      .field("information_content", &sequence_prediction::information_content)
-      .field("entropy", &sequence_prediction::entropy)
-      .field("distribution", &sequence_prediction::distribution)
-      .method("as_tibble", &sequence_prediction::as_tibble)
+    .field("information_content", &sequence_prediction::information_content)
+    .field("entropy", &sequence_prediction::entropy)
+    .field("distribution", &sequence_prediction::distribution)
+    .method("as_tibble", &sequence_prediction::as_tibble)
     ;
     
     class_<ppm>("ppm")
@@ -569,14 +800,14 @@ RCPP_EXPOSED_CLASS(record_decay)
       .method("model_seq", &ppm::model_seq)
       .method("insert", &ppm::insert)
       ;
-
+    
     class_<ppm_simple>("ppm_simple")
       .derives<ppm>("ppm")
       .constructor<int, int, bool, bool, bool, std::string>()
       .method("get_count", &ppm_simple::get_count)
       .method("as_tibble", &ppm_simple::as_tibble)
     ;
-
+    
     class_<ppm_decay>("ppm_decay")
       .derives<ppm>("ppm")
       .constructor<int, int, List>()
@@ -591,7 +822,7 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("ltm_weight", &ppm_decay::ltm_weight)
       .field("noise", &ppm_decay::noise)
     ;
-
+    
     class_<record_decay>("record_decay")
       .constructor()
       .field("pos", &record_decay::pos)
