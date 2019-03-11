@@ -199,10 +199,10 @@ public:
 
     for (int i = 0; i < n; i ++) {
       int pos_i = decay? pos[i] : 0;
-      int time_i = decay? time[i] : 0;
+      double time_i = decay? time[i] : 0;
       // Predict
       if (predict) {
-        sequence context = i < 1 ? sequence() :
+        sequence context = (i < 1 || order_bound < 1) ? sequence() :
           subseq(x,
                  std::max(0, i - order_bound),
                  i - 1);
@@ -211,6 +211,7 @@ public:
       // Train
       if (train) {
         for (int h = std::max(0, i - order_bound); h <= i; h ++) {
+          std::cout << "h = " << h << ", i = " << i << "\n";
           this->insert(subseq(x, h, i), pos_i, time_i);
         }
       }
@@ -269,12 +270,12 @@ public:
   
   List as_list() {
     int n = data.size();
-    List n_gram;
+    List n_gram(n);
     NumericVector count(n); // NumericVector deals better with v long ints
     
     int i = 0;
     for(auto kv : data) {
-      n_gram.push_back(kv.first);
+      n_gram[i] = kv.first;
       count[i] = kv.second.count;
       i ++;
     } 
@@ -352,15 +353,15 @@ public:
   
   List as_list() {
     int n = data.size();
-    List n_gram;
+    List n_gram(n);
     List pos(n);
     List time(n);
     
     int i = 0;
     for(auto kv : data) {
-      n_gram.push_back(kv.first);
-      pos.push_back(kv.second.pos);
-      time.push_back(kv.second.time);
+      n_gram[i] = kv.first;
+      pos[i] = kv.second.pos;
+      time[i] = kv.second.time;
       i ++;
     } 
     
@@ -417,6 +418,8 @@ RCPP_EXPOSED_CLASS(record_decay)
       .derives<ppm>("ppm")
       .constructor<int, int, List>()
       .method("get", &ppm_decay::get)
+      .method("as_tibble", &ppm_decay::as_tibble)
+      .method("as_list", &ppm_decay::as_list)
       .field("buffer_length_time", &ppm_decay::buffer_length_time)
       .field("buffer_length_items", &ppm_decay::buffer_length_items)
       .field("buffer_weight", &ppm_decay::buffer_weight)
