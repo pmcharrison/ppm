@@ -1,16 +1,57 @@
 library(ppm)
 library(tidyverse)
 
-x <- new(ppm_simple, 
-         alphabet_size = 100,
-         order_bound = 4, 
+x <- new(ppm:::ppm,
+         alphabet_size = 10,
+         order_bound = 10, 
          shortest_deterministic = TRUE,
          exclusion = TRUE,
          update_exclusion = TRUE,
-         escape = "C")
+         escape = new(escape_a))
+x$escape$lambda(1:5, 15)
 
+x <- ppm:::test_ppm()
+
+x$escape
+x$escape$lambda(1:5, 15)
+
+
+x$escape
+
+y <- new(ppm:::escape_b)
+y
+y$k
+
+y$lambda(1:5, 15)
+
+x <- new(ppm_simple, 
+         alphabet_size = 10,
+         order_bound = 10, 
+         shortest_deterministic = TRUE,
+         exclusion = TRUE,
+         update_exclusion = TRUE,
+         escape = new(escape_a))
+
+x$escape$lambda(1:5, 15)
+
+y <- x$model_seq(sample(0:9, size = 30, replace = TRUE), 
+                 time = numeric(),
+                 train = TRUE, 
+                 predict = TRUE, 
+                 keep_distribution = TRUE, 
+                 keep_entropy = TRUE)
+View(x$as_tibble())
+View(y$as_tibble())
+
+
+df <- x$as_tibble()
+df$n_gram <- paste(lapply(df$n_gram, function(x) paste(x, collapse = " ")))
+df
+y$as_tibble()
+
+library(ppm)
 x <- new(ppm_decay,
-         alphabet_size = 100,
+         alphabet_size = 3,
          order_bound = 10,
          decay_par = list(
            buffer_length_items = 10,
@@ -20,17 +61,20 @@ x <- new(ppm_decay,
            ltm_weight = 0,
            noise = 0.5
          ))
-
-y <- x$model_seq(c(1, 2, 3, 1, 2, 1, 1, 4, 5), 
+y <- x$model_seq(sample(0:2, size = 20, replace = TRUE), 
+                 time = 1:20 + 0.5,
                  train = TRUE, 
                  predict = TRUE, 
                  keep_distribution = TRUE, 
                  keep_entropy = TRUE)
+x$as_list()
+View(x$as_tibble())
 
-x$as_tibble() %>% 
-  dplyr::mutate(n_gram = map_chr(n_gram, paste, collapse = " "))
+View(y$as_tibble())
 
-y$as_tibble()
+z <- tst::new_tree(order_bound = 10)
+tst::add_seq(z, sample(10, size = 10000, replace = TRUE))
+
 
 y <- x$model_seq(0:5, 
                  train = FALSE, 

@@ -13,10 +13,14 @@ Rcpp::loadModule("ppm", TRUE)
 #' @export
 NULL
 
-#' @name ppm_simple
-#' @export
-NULL
+#' #' @name ppm_simple
+#' #' @export
+#' NULL
+#' 
+#' #' @name ppm_decay
+#' #' @export
+#' NULL
 
-#' @name ppm_decay
+#' @name escape_a
 #' @export
 NULL

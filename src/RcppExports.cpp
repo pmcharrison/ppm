@@ -5,13 +5,25 @@
 
 using namespace Rcpp;
 
+// compute_entropy
+double compute_entropy(std::vector<double> x);
+RcppExport SEXP _ppm_compute_entropy(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<double> >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_entropy(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 RcppExport SEXP run_testthat_tests();
 RcppExport SEXP _rcpp_module_boot_ppm();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_ppm_compute_entropy", (DL_FUNC) &_ppm_compute_entropy, 1},
     {"_rcpp_module_boot_ppm", (DL_FUNC) &_rcpp_module_boot_ppm, 0},
-    {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 0},
+    {"run_testthat_tests",   (DL_FUNC) &run_testthat_tests,   0},
     {NULL, NULL, 0}
 };
 
