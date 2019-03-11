@@ -732,6 +732,7 @@ public:
 class ppm_decay: public ppm {
 public:
   std::unordered_map<sequence, record_decay, container_hash<sequence>> data;
+  std::vector<double> all_time;
   
   double buffer_length_time;
   int buffer_length_items;
@@ -765,6 +766,7 @@ public:
   ~ ppm_decay() {};
   
   bool insert(sequence x, int pos, double time, bool full_only) {
+    this->all_time.push_back(time);
     std::unordered_map<sequence, 
                        record_decay, 
                        container_hash<sequence>>::const_iterator target = data.find(x);
@@ -784,9 +786,49 @@ public:
                     double time,
                     bool update_excluded) {
     record_decay record = this->get(n_gram);
-    double weight = static_cast<double>(record.pos.size());
+    std::vector<int> data_pos = record.pos;
+    std::vector<double> data_time = record.time;
+    
+    if (data_pos.size() != data_time.size()) {
+      stop("data_pos and data_time must have identical sizes");
+    }
+    int N = static_cast<int>(this->all_time.size());
+    int n = static_cast<int>(data_pos.size());
+    
+    double weight = 0.0;
+    for (int i = 0; i < n; i ++) {
+      if (data_time[i] > time) {
+        stop("tried to predict using training data from the future");
+      }
+      if (data_pos[i] < 0) {
+        stop("data_pos cannot be less than 0");
+      }
+      bool item_buffer_failed = data_pos[i] + this->buffer_length_items >= N;
+      double temporal_buffer_fail_time = data_time[i] + this->buffer_length_time;
+      
+      double buffer_fail_time = item_buffer_failed ? std::min(
+        this->all_time[data_pos[i] + this->buffer_length_items],
+        temporal_buffer_fail_time
+      ) : temporal_buffer_fail_time;
+      
+      double time_since_buffer_fail = time - buffer_fail_time;
+      
+      if (time_since_buffer_fail < 0) {
+        weight += this->buffer_weight;
+      } else {
+        weight += this->decay_exp(time_since_buffer_fail);
+      }
+    }
     return(weight);
   };
+  
+  double decay_exp(double elapsed_time) {
+    double lambda = log(2.0) / this->stm_half_life;
+    return 
+      this->ltm_weight + 
+      (this->stm_weight - this->ltm_weight) * 
+      exp(- lambda * elapsed_time);
+  }
   
   record_decay get(sequence x) {
     std::unordered_map<sequence, 
