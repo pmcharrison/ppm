@@ -1,6 +1,6 @@
 #include <testthat.h>
 
-std::vector<double> normalise_distribution(std::vector<double>);
+std::vector<double> normalise_distribution(std::vector<double>&);
 
 context("Normalise distribution") {
 

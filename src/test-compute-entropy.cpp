@@ -1,7 +1,7 @@
 #include <testthat.h>
 #include <cmath>
 
-double compute_entropy (std::vector<double> x);
+double compute_entropy (std::vector<double>);
 
 context("compute_entropy") {
 

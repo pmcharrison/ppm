@@ -17,7 +17,7 @@ using namespace Rcpp;
 
 typedef std::vector<int> sequence;
 
-sequence subseq(sequence x, int first, int last) {
+sequence subseq(const sequence &x, int first, int last) {
   if (first < 0 || last >= x.size() || last < first) {
     stop("invalid subsequence indices");
   }
@@ -29,7 +29,7 @@ sequence subseq(sequence x, int first, int last) {
   return(res);
 }
 
-sequence last_n (sequence x, int n) {
+sequence last_n (const sequence &x, int n) {
   if (n < 0) {
     stop("n cannot be less than 0");
   }
@@ -49,7 +49,7 @@ sequence last_n (sequence x, int n) {
   }
 }
 
-void print(sequence x) {
+void print(const sequence &x) {
   for (int j = 0; j < x.size(); j ++) {
     if (j > 0) {
       std::cout << " ";
@@ -59,7 +59,7 @@ void print(sequence x) {
   std::cout << "\n";
 }
 
-void print(std::vector<double> x) {
+void print(const std::vector<double> &x) {
   for (int j = 0; j < x.size(); j ++) {
     if (j > 0) {
       std::cout << " ";
@@ -104,7 +104,6 @@ public:
   }
 };
 
-// [[Rcpp::export]]
 double compute_entropy(std::vector<double> x) {
   int n = x.size();
   double counter = 0;
@@ -115,7 +114,7 @@ double compute_entropy(std::vector<double> x) {
   return counter;
 }
 
-std::vector<double> normalise_distribution(std::vector<double> x) {
+std::vector<double> normalise_distribution(std::vector<double> &x) {
   double total = 0;
   int n = static_cast<int>(x.size());
   for (int i = 0; i < n; i ++) {
@@ -151,7 +150,7 @@ public:
                     int pos_, 
                     double time_, 
                     int model_order_,
-                    std::vector<double> &distribution_) {
+                    const std::vector<double> &distribution_) {
     int dist_size_ = distribution_.size();
     if (symbol_ > dist_size_) {
       std::cout << "symbol = " << symbol_ << ", distribution(n) = " << distribution_.size() << "\n";
@@ -189,7 +188,7 @@ public:
     decay = decay_;
   }
   
-  void insert(symbol_prediction x) {
+  void insert(const symbol_prediction &x) {
     symbol.push_back(x.symbol);
     model_order.push_back(x.model_order);
     information_content.push_back(x.information_content);
@@ -284,7 +283,7 @@ public:
     return true;
   };
   
-  virtual double get_weight(sequence n_gram, 
+  virtual double get_weight(const sequence &n_gram, 
                             int pos, 
                             double time, 
                             bool update_excluded) {
@@ -328,7 +327,7 @@ public:
     return(result);
   }
   
-  symbol_prediction predict_symbol(int symbol, sequence context,
+  symbol_prediction predict_symbol(int symbol, const sequence &context,
                                    int pos, double time) {
     if (symbol < 0) {
       stop("symbols must be greater than or equal to 0");
@@ -347,7 +346,7 @@ public:
     return(out);
   } 
   
-  std::vector<double> get_probability_distribution(sequence context,
+  std::vector<double> get_probability_distribution(const sequence &context,
                                                    model_order model_order,
                                                    int pos, 
                                                    double time) {
@@ -363,12 +362,12 @@ public:
     return normalise_distribution(dist);
   }
   
-  std::vector<double> get_smoothed_distribution(std::vector<int> context,
+  std::vector<double> get_smoothed_distribution(const sequence &context,
                                                 model_order model_order, 
                                                 int order,
                                                 int pos, 
                                                 double time,
-                                                std::vector<bool> excluded) {
+                                                std::vector<bool> &excluded) {
     if (order == -1) {
       return get_order_minus_1_distribution(excluded);
     } else {
@@ -433,7 +432,7 @@ public:
   }
   
   std::vector<double>get_alphas(double lambda, 
-                                std::vector<double> counts, 
+                                const std::vector<double> &counts, 
                                 double context_count) {
     if (lambda > 0) {
       std::vector<double> res(this->alphabet_size);
@@ -451,7 +450,7 @@ public:
   // introduced by Pearce (2005)'s decision to introduce exclusion
   // (see 6.2.3.3), though the thesis does not mention
   // this explicitly.
-  double get_lambda(std::vector<double> counts, double context_count) {
+  double get_lambda(const std::vector<double> &counts, double context_count) {
     std::string e = this->escape;
     if (context_count <= 0) {
       return 0.0;
@@ -470,7 +469,7 @@ public:
     }
   }
   
-  double get_k(std::string e) {
+  double get_k(const std::string &e) {
     if (e == "a") {
       return 0;
     } else if (e == "b") {
@@ -486,30 +485,30 @@ public:
     }
   }
   
-  double lambda_a(std::vector<double> counts, double context_count) {
+  double lambda_a(const std::vector<double> &counts, double context_count) {
     return static_cast<double>(context_count) /
       (static_cast<double>(context_count) + 1.0);
   }
   
-  double lambda_b(std::vector<double> counts, double context_count) {
+  double lambda_b(const std::vector<double> &counts, double context_count) {
     int num_distinct_symbols = this->count_positive_values(counts);
     return static_cast<double>(context_count) /
       static_cast<double>(context_count + num_distinct_symbols);
   }
   
-  double lambda_c(std::vector<double> counts, double context_count) {
+  double lambda_c(const std::vector<double> &counts, double context_count) {
     int num_distinct_symbols = this->count_positive_values(counts);
     return static_cast<double>(context_count) /
       static_cast<double>(context_count + num_distinct_symbols);
   }
   
-  double lambda_d(std::vector<double> counts, double context_count) {
+  double lambda_d(const std::vector<double> &counts, double context_count) {
     int num_distinct_symbols = this->count_positive_values(counts);
     return static_cast<double>(context_count) /
       (static_cast<double>(context_count + num_distinct_symbols) / 2.0);
   }
   
-  double lambda_ax(std::vector<double> counts, double context_count) {
+  double lambda_ax(const std::vector<double> &counts, double context_count) {
     // We generalise the definition of singletons to decayed counts between
     // 0 and 1. This is a bit hacky though, and the escape method
     // should ultimately be reconfigured for new decay functions.
@@ -517,7 +516,7 @@ public:
       static_cast<double>(context_count + num_singletons(counts));
   }
   
-  int num_singletons(std::vector<double> x) {
+  int num_singletons(const std::vector<double> &x) {
     int n = static_cast<int>(x.size());
     int res = 0;
     for (int i = 0; i < n; i ++) {
@@ -541,7 +540,7 @@ public:
     }
   }
   
-  int count_positive_values(std::vector<double> x) {
+  int count_positive_values(const std::vector<double> &x) {
     int n = static_cast<int>(x.size());
     int res = 0;
     for (int i = 0; i < n; i ++) {
@@ -552,7 +551,7 @@ public:
     return res;
   }
   
-  std::vector<double> get_order_minus_1_distribution(std::vector<bool> excluded) {
+  std::vector<double> get_order_minus_1_distribution(const std::vector<bool> &excluded) {
     int num_observed_symbols = 0;
     for (int i = 0; i < this->alphabet_size; i ++) {
       if (excluded[i]) {
@@ -564,7 +563,7 @@ public:
     return res;
   }
   
-  model_order get_model_order(sequence context, int pos, double time) {
+  model_order get_model_order(const sequence &context, int pos, double time) {
     // int longest_available = this->get_longest_context(context);
     int chosen = static_cast<int>(context.size());
     
@@ -588,7 +587,7 @@ public:
     return(model_order(chosen, det_any, det_shortest, det_is_selected));
   }
   
-  int get_shortest_deterministic_context(sequence context, int pos, double time) {
+  int get_shortest_deterministic_context(const sequence &context, int pos, double time) {
     int len = static_cast<int>(context.size());
     int res = -1;
     for (int order = 0; order <= std::min(len, order_bound); order ++) {
@@ -602,7 +601,7 @@ public:
     return(res);
   }
   
-  bool is_deterministic_context(sequence context, int pos, double time) {
+  bool is_deterministic_context(const sequence &context, int pos, double time) {
     int num_continuations = 0;
     for (int i = 0; i < alphabet_size; i ++) {
       sequence n_gram = context;
@@ -688,14 +687,14 @@ public:
     }
   }
   
-  double get_weight(sequence n_gram, 
+  double get_weight(const sequence &n_gram, 
                     int pos, 
                     double time,
                     bool update_excluded) {
     return static_cast<double>(this->get_count(n_gram, update_excluded));
   };
   
-  long int get_count(sequence x, bool update_excluded) {
+  long int get_count(const sequence &x, bool update_excluded) {
     std::unordered_map<sequence, record_simple, container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       return(0);
@@ -785,7 +784,7 @@ public:
     }
   }
   
-  double get_weight(sequence n_gram, 
+  double get_weight(const sequence &n_gram, 
                     int pos, 
                     double time,
                     bool update_excluded) {
@@ -834,7 +833,7 @@ public:
       exp(- lambda * elapsed_time);
   }
   
-  record_decay get(sequence x) {
+  record_decay get(const sequence &x) {
     std::unordered_map<sequence, 
                        record_decay, 
                        container_hash<sequence>>::const_iterator target = data.find(x);

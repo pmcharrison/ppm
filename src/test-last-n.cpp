@@ -1,7 +1,7 @@
 #include <testthat.h>
 
 typedef std::vector<int> sequence;
-sequence last_n (sequence x, int n);
+sequence last_n (const sequence&, int);
 
 context("last_n") {
 
