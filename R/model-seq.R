@@ -11,6 +11,7 @@ model_seq <- function(model,
                       predict = TRUE,
                       return_distribution = TRUE,
                       return_entropy = TRUE) {
+  stopifnot(is_ppm(model))
   checkmate::qassert(seq, "X")
   checkmate::qassert(train, "B1")
   checkmate::qassert(predict, "B1")

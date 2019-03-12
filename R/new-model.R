@@ -34,6 +34,7 @@ new_ppm_simple <- function(
 new_ppm_decay <- function(
   alphabet_size,
   order_bound = 10L,
+  buffer_length_time = 2.0,
   buffer_length_items = 13L,
   buffer_weight = 0.77,
   stm_half_life = 2.0,
@@ -43,6 +44,7 @@ new_ppm_decay <- function(
 ) {
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
+  checkmate::qassert(buffer_length_time, "N1[0,)")
   checkmate::qassert(buffer_length_items, "X1[0,)")
   checkmate::qassert(buffer_weight, "N1[0,)")
   checkmate::qassert(stm_half_life, "N1(0,)")
@@ -51,12 +53,13 @@ new_ppm_decay <- function(
   checkmate::qassert(noise, "N1[0,)")
   
   decay_par = list(
+    buffer_length_time = as.numeric(buffer_length_time),
     buffer_length_items = as.integer(buffer_length_items),
-    buffer_weight = buffer_weight,
-    stm_half_life = stm_half_life,
-    stm_weight = stm_weight,
-    ltm_weight = ltm_weight,
-    noise = noise
+    buffer_weight = as.numeric(buffer_weight),
+    stm_half_life = as.numeric(stm_half_life),
+    stm_weight = as.numeric(stm_weight),
+    ltm_weight = as.numeric(ltm_weight),
+    noise = as.numeric(noise)
   )
   
   new(
@@ -65,6 +68,18 @@ new_ppm_decay <- function(
     order_bound = as.integer(order_bound),
     decay_par = decay_par
   )
+}
+
+#' Is 'x' a 'ppm' object?
+#'
+#' Tests for objects of class "ppm".
+#' 
+#' @param x Object to test.
+#' 
+#' @return TRUE if the object is of class "ppm", FALSE otherwise.
+#' @export
+is_ppm <- function(x) {
+  is_ppm_simple(x) || is_ppm_decay(x)
 }
 
 #' Is 'x' a 'ppm_simple' object?

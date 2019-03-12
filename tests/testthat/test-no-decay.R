@@ -198,10 +198,11 @@ test_that("IDyOM PPM* with mixtures", {
     "abracadabrac", "letlettertele", "assanissimassa",
     "mississippi", "agcgacgag"
   ) %>% strsplit(split = "")
-  files <- file.path(if (interactive()) "tests/testthat",
-                     "data", 
-                     paste("ppm-mix-", 1:5, ".R", sep = ""))
-
+  files <- paste(if (interactive()) "tests/testthat/",
+                 "data/", 
+                 paste("ppm-mix-", 1:5, ".R", sep = ""),
+                 sep = "")
+  
   for (i in seq_along(seqs)) {
     seq <- seqs[i]
     file <- files[i]
@@ -214,9 +215,11 @@ test_that("IDyOM PPM* with mixtures", {
 
 test_that("IDyOM PPM* with mixtures and update exclusion", {
   seqs <- c("abracadabrac") %>% strsplit(split = "")
-  files <- file.path(if (interactive()) "tests/testthat",
-                     "data", paste("ppm-mix-ui-", 1, ".R", sep = ""))
-
+  files <- paste(if (interactive()) "tests/testthat/",
+                 "data/", 
+                 paste("ppm-mix-ui-", 1, ".R", sep = ""),
+                 sep = "")
+  
   for (i in seq_along(seqs)) {
     seq <- seqs[i]
     file <- files[i]
@@ -229,9 +232,11 @@ test_that("IDyOM PPM* with mixtures and update exclusion", {
 
 test_that("IDyOM PPM with mixtures and order bound = 0, 1", {
   seqs <- c("abracadabrac", "abracadabrac") %>% strsplit(split = "")
-  files <- file.path(if (interactive()) "tests/testthat",
-                     "data", paste("ppm-fix-", 0:1, ".R", sep = ""))
-
+  files <- paste(if (interactive()) "tests/testthat/",
+                 "data/", 
+                 paste("ppm-fix-", 0:1, ".R", sep = ""),
+                 sep = "")
+  
   for (i in seq_along(seqs)) {
     seq <- seqs[i]
     file <- files[i]
@@ -246,14 +251,14 @@ test_that("IDyOM PPM with mixtures and order bound = 0, 1", {
 
 test_that("Louis Couperin: unmeasured prelude, no. 7", {
   seqs <- paste0("45 52 57 60 64 69 45 52 57 60 64 69 45 45 44 52 60 ",
-                "60 59 64 64 71 45 57 76 74 72 71 72 72 72 72 72 72 ",
-                "72 72 52 64 69 69 71 71 71 71 71 71 50 52 54 55 52 ",
-                "53 52 50 48 48 47 69 71 72 55 74 62 67 48 67 69 71 ",
-                "57 72 72 57 64 65 72 72 72 60 62 66 71 71 62 68 66 ",
-                "68 64 64 64 64 59 59 60 64 68 68 69 69 50 49 49 50 ",
-                "59 64 64 65 69 47 48 50 52 53 50 50 52 60 64 69 52 ",
-                "60 60 59 69 69 68 68 68 45 52 57 61 64 69 45 52 57 ",
-                "62 61 64 69") %>%
+                 "60 59 64 64 71 45 57 76 74 72 71 72 72 72 72 72 72 ",
+                 "72 72 52 64 69 69 71 71 71 71 71 71 50 52 54 55 52 ",
+                 "53 52 50 48 48 47 69 71 72 55 74 62 67 48 67 69 71 ",
+                 "57 72 72 57 64 65 72 72 72 60 62 66 71 71 62 68 66 ",
+                 "68 64 64 64 64 59 59 60 64 68 68 69 69 50 49 49 50 ",
+                 "59 64 64 65 69 47 48 50 52 53 50 50 52 60 64 69 52 ",
+                 "60 60 59 69 69 68 68 68 45 52 57 61 64 69 45 52 57 ",
+                 "62 61 64 69") %>%
     strsplit(split = " ") %>% magrittr::extract2(1) %>% list
   answer <- c(4.195832)
   test_ppm2(seqs, answer, update_exclusion = FALSE)

@@ -6,6 +6,7 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
+#include <random>
 #include <cmath>
 #include <iostream>
 #include <algorithm>
@@ -259,6 +260,7 @@ public:
   bool decay;
   
   int num_observations = 0;
+  std::vector<double> all_time;
   
   ppm(int alphabet_size_,
       int order_bound_,
@@ -325,6 +327,7 @@ public:
           full_only = this->insert(subseq(x, h, i), pos_i, time_i, full_only);
         }
         num_observations ++;
+        if (decay) this->all_time.push_back(time_i);
       }
     }
     return(result);
@@ -765,7 +768,6 @@ public:
 class ppm_decay: public ppm {
 public:
   std::unordered_map<sequence, record_decay, container_hash<sequence>> data;
-  std::vector<double> all_time;
   
   double buffer_length_time;
   int buffer_length_items;
@@ -774,7 +776,9 @@ public:
   double stm_weight;
   double ltm_weight;
   double noise;
-  
+  std::mt19937 random_engine;
+  std::normal_distribution<> noise_generator;
+
   ppm_decay(
     int alphabet_size_,
     int order_bound_,
@@ -789,18 +793,25 @@ public:
       true // decay
   ) {
     data = {};
+    buffer_length_time = decay_par["buffer_length_time"];
     buffer_length_items = decay_par["buffer_length_items"];
     buffer_weight = decay_par["buffer_weight"];
     stm_half_life = decay_par["stm_half_life"];
     stm_weight = decay_par["stm_weight"];
     ltm_weight = decay_par["ltm_weight"];
     noise = decay_par["noise"];
+    
+    std::random_device rd;
+    std::mt19937 engine(rd());
+    std::normal_distribution<> gen(0, noise);
+    
+    random_engine = engine;
+    noise_generator = gen;
   }
   
   ~ ppm_decay() {};
   
   bool insert(sequence x, int pos, double time, bool full_only) {
-    this->all_time.push_back(time);
     std::unordered_map<sequence, 
                        record_decay, 
                        container_hash<sequence>>::const_iterator target = data.find(x);
@@ -831,21 +842,38 @@ public:
     
     double weight = 0.0;
     for (int i = 0; i < n; i ++) {
+      // std::cout << "i = " << i << ": \n";
       if (data_time[i] > time) {
         stop("tried to predict using training data from the future");
       }
       if (data_pos[i] < 0) {
         stop("data_pos cannot be less than 0");
       }
-      bool item_buffer_failed = data_pos[i] + this->buffer_length_items >= N;
+      int pos_item_buffer_fails = data_pos[i] + this->buffer_length_items;
+      bool item_buffer_failed = pos_item_buffer_fails <= N - 1;
       double temporal_buffer_fail_time = data_time[i] + this->buffer_length_time;
+      double buffer_fail_time; 
       
-      double buffer_fail_time = item_buffer_failed ? std::min(
-        this->all_time[data_pos[i] + this->buffer_length_items],
-                      temporal_buffer_fail_time
-      ) : temporal_buffer_fail_time;
-      
+      if (item_buffer_failed) {
+        double time_when_item_buffer_failed = this->all_time[pos_item_buffer_fails];
+        // std::cout << "time_when_item_buffer_failed = " << time_when_item_buffer_failed << "\n";
+        buffer_fail_time = std::min(time_when_item_buffer_failed,
+                                    temporal_buffer_fail_time);
+      } else {
+        buffer_fail_time = temporal_buffer_fail_time;
+      }
+
       double time_since_buffer_fail = time - buffer_fail_time;
+      
+      // std::cout << "pos = " << pos << "\n";
+      // std::cout << "time = " << time << "\n";
+      // std::cout << "N = " << N << "\n";
+      // std::cout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
+      // std::cout << "this->buffer_length_items = " << this->buffer_length_items << "\n";
+      // std::cout << "item_buffer_failed = " << item_buffer_failed << "\n";
+      // std::cout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
+      // std::cout << "buffer_fail_time = " << buffer_fail_time << "\n";
+      // std::cout << "time_since_buffer_fail = " << time_since_buffer_fail << "\n";
       
       if (time_since_buffer_fail < 0) {
         weight += this->buffer_weight;
@@ -853,7 +881,10 @@ public:
         weight += this->decay_exp(time_since_buffer_fail);
       }
     }
-    return(weight);
+    double noise = this->noise_generator(this->random_engine);
+    // std::cout << "noise = " << noise << "\n";
+    weight += noise;
+    return std::max(0.0, weight);
   };
   
   double decay_exp(double elapsed_time) {
@@ -938,6 +969,7 @@ RCPP_EXPOSED_CLASS(record_decay)
          .field("escape", &ppm::escape)
          .method("model_seq", &ppm::model_seq)
          .method("insert", &ppm::insert)
+         .method("get_weight", &ppm::get_weight)
       ;
     
     class_<ppm_simple>("ppm_simple")
