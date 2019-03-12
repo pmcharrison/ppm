@@ -229,15 +229,18 @@ public:
 class model_order {
 public:
   int chosen;
+  int longest_available;
   bool deterministic_any;
   int deterministic_shortest;
   bool deterministic_is_selected;
   
   model_order(int chosen_,
+              int longest_available_,
               bool deterministic_any_,
               int deterministic_shortest_, 
               bool deterministic_is_selected_) {
     chosen = chosen_;
+    longest_available = longest_available_;
     deterministic_any = deterministic_any_;
     deterministic_shortest = deterministic_shortest_;
     deterministic_is_selected = deterministic_is_selected_;
@@ -382,18 +385,12 @@ public:
       std::vector<int> n_gram = last_n(context, order);
       n_gram.resize(order + 1);
       
-      // std::cout << "n_gram = ";
-      // print(n_gram);
-      
       std::vector<double> counts(this->alphabet_size);
       for (int i = 0; i < this->alphabet_size; i ++) {
         n_gram[order] = i;
         counts[i] = this->get_weight(n_gram, pos, time, update_excluded);
         counts[i] = this->modify_count(counts[i]);
       }
-      
-      // std::cout << "counts = ";
-      // print(counts);
       
       double context_count = 0;
       for (int i = 0; i < this->alphabet_size; i ++) {
@@ -402,10 +399,21 @@ public:
         }
       }
       
-      // std::cout << "context_count = " << context_count << "\n";
       double lambda = get_lambda(counts, context_count);
       
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
+      
+      // std::cout << "pos = " << pos << "\n";
+      // std::cout << "model_order.chosen = " << model_order.chosen << "\n";
+      // std::cout << "this->shortest_deterministic = " << this->shortest_deterministic << "\n";
+      // std::cout << "this->update_exclusion = " << this->update_exclusion << "\n";
+      // std::cout << "model_order.deterministic_is_selected = " << model_order.deterministic_is_selected << "\n";
+      // std::cout << "context = ";
+      // print(last_n(context, order));
+      // std::cout << "update_excluded = " << update_excluded << "\n";
+      // std::cout << "counts = ";
+      // print(counts);
+      // std::cout << "context_count = " << context_count << "\n";
       // std::cout << "order = " << order << ", lambda = " << lambda << "\n";
       // std::cout << "alphas = ";
       // print(alphas);
@@ -564,8 +572,8 @@ public:
   }
   
   model_order get_model_order(const sequence &context, int pos, double time) {
-    // int longest_available = this->get_longest_context(context);
-    int chosen = static_cast<int>(context.size());
+    const int longest_available = this->get_longest_context(context);
+    int chosen = longest_available;
     
     int det_shortest = - 1;
     int det_any = false;
@@ -577,14 +585,64 @@ public:
                                                                   time);
       bool det_any = det_shortest >= 0;
       if (det_any) {
-        if (det_shortest < chosen) {
+        if (det_shortest < longest_available) {
           det_is_selected = true;
           chosen = det_shortest;
         }
       }
     }
     
-    return(model_order(chosen, det_any, det_shortest, det_is_selected));
+    return(model_order(chosen, longest_available,
+                       det_any, det_shortest, det_is_selected));
+  }
+  
+  // Looks for the longest context length in the tree
+  // with a valid continuation.
+  int get_longest_context(sequence context) {
+    if (this->decay) {
+      return context.size();
+    } else {
+      // std::cout << "get_longest_context...\n";
+      int context_len = static_cast<int>(context.size());
+      int upper_bound = std::min(order_bound, context_len);
+      
+      for (int order = upper_bound; order >= 0; order --) {
+        // std::cout << "Checking order = " << order << "\n";
+        sequence x = order == 0 ? sequence() : subseq(context,
+                                           context_len - order,
+                                           context_len - 1);
+        // std::cout << "Truncated context = ";
+        // print(x);
+        // Skip this iteration if the context doesn't exist in the tree
+        if (order > 0 && // we don't store 0-grams in the tree
+            this->get_weight(x, 
+                             0, // pos - irrelevant for non-decay-based models
+                             0, // time - irrelevant for non-decay-based models
+                             false) // update exclusion
+              == 0.0) {
+          // std::cout << "Couldn't find context in the tree\n";
+          continue;
+        }
+        // Skip this iteration if we can't find a continuation for that context
+        bool any_continuation = false;
+        x.resize(order + 1);
+        for (int i = 0; i < this->alphabet_size; i ++) {
+          x[order] = i;
+          if (this->get_weight(x, 0, 0, false) > 0.0) {
+            any_continuation = true;
+            break;
+          }
+        }
+        if (! any_continuation) {
+          // std::cout << "Couldn't find any continuations for this context\n";
+          continue;
+        }
+        // std::cout << "Couldn't find a problem with this context\n";
+        return(order);
+      }
+      // std::cout << "Escaped to order = -1\n";
+      return(- 1);
+    }
   }
   
   int get_shortest_deterministic_context(const sequence &context, int pos, double time) {
@@ -620,33 +678,6 @@ public:
     return num_continuations == 1;
   }
 };
-
-// I don't think get_longest_context is necessary.
-// We can just start with the full context we have available,
-// and the model will escape down to lower levels if 
-// it doesn't find any counts.
-
-// int get_longest_context(sequence context) {
-//   int context_len = static_cast<int>(context.size());
-//   int max_order = std::min(order_bound, context_len);
-// 
-//   
-//   
-//   for (int order = max_order; order >= 0; order --) {
-//     sequence x = order == 0 ? sequence() : subseq(context, 
-//                                        context_len - order, 
-//                                        context_len - 1);
-//     bool 
-//     
-//     
-//     // Check that context exists in the tree
-//     
-//     // Check that context has a continuation
-//     return(order);
-//   }
-//   return(- 1);
-//   
-// }
 
 class ppm_simple: public ppm {
 public:
@@ -811,7 +842,7 @@ public:
       
       double buffer_fail_time = item_buffer_failed ? std::min(
         this->all_time[data_pos[i] + this->buffer_length_items],
-        temporal_buffer_fail_time
+                      temporal_buffer_fail_time
       ) : temporal_buffer_fail_time;
       
       double time_since_buffer_fail = time - buffer_fail_time;
@@ -829,8 +860,8 @@ public:
     double lambda = log(2.0) / this->stm_half_life;
     return 
       this->ltm_weight + 
-      (this->stm_weight - this->ltm_weight) * 
-      exp(- lambda * elapsed_time);
+        (this->stm_weight - this->ltm_weight) * 
+        exp(- lambda * elapsed_time);
   }
   
   record_decay get(const sequence &x) {
@@ -899,14 +930,14 @@ RCPP_EXPOSED_CLASS(record_decay)
     class_<ppm>("ppm")
       // ppm class cannot be instantiated directly in R
       // .constructor<int, int, bool, bool, bool, std::string>()
-      .field("alphabet_size", &ppm::alphabet_size)
-      .field("order_bound", &ppm::order_bound)
-      .field("shortest_deterministic", &ppm::shortest_deterministic)
-      .field("exclusion", &ppm::exclusion)
-      .field("update_exclusion", &ppm::update_exclusion)
-      .field("escape", &ppm::escape)
-      .method("model_seq", &ppm::model_seq)
-      .method("insert", &ppm::insert)
+         .field("alphabet_size", &ppm::alphabet_size)
+         .field("order_bound", &ppm::order_bound)
+         .field("shortest_deterministic", &ppm::shortest_deterministic)
+         .field("exclusion", &ppm::exclusion)
+         .field("update_exclusion", &ppm::update_exclusion)
+         .field("escape", &ppm::escape)
+         .method("model_seq", &ppm::model_seq)
+         .method("insert", &ppm::insert)
       ;
     
     class_<ppm_simple>("ppm_simple")
