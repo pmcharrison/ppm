@@ -254,6 +254,7 @@ public:
   bool update_exclusion;
   std::string escape;
   double k;
+  bool decay;
   
   int num_observations = 0;
   
@@ -262,7 +263,8 @@ public:
       bool shortest_deterministic_,
       bool exclusion_,
       bool update_exclusion_,
-      std::string escape_
+      std::string escape_,
+      bool decay_
   ) {
     alphabet_size = alphabet_size_;
     order_bound = order_bound_;
@@ -271,6 +273,7 @@ public:
     update_exclusion = update_exclusion_;
     escape = escape_;
     k = this->get_k(escape);
+    decay = decay_;
   }
   
   virtual ~ ppm() {};
@@ -295,17 +298,16 @@ public:
                                 bool return_distribution = true,
                                 bool return_entropy = true) {
     int n = x.size();
-    bool decay = time.size() > 0;
-    if (decay && x.size() != time.size()) {
+    if (this->decay && x.size() != time.size()) {
       stop("time must either have length 0 or have length equal to x");
     }
     sequence_prediction result(return_entropy,
                                return_distribution,
-                               decay);
+                               this->decay);
     
     for (int i = 0; i < n; i ++) {
       int pos_i = num_observations;
-      double time_i = decay? time[i] : 0;
+      double time_i = this->decay? time[i] : 0;
       // Predict
       if (predict) {
         sequence context = (i < 1 || order_bound < 1) ? sequence() :
@@ -666,7 +668,8 @@ public:
       shortest_deterministic_, 
       exclusion_, 
       update_exclusion_, 
-      escape_){
+      escape_,
+      false) { // decay
     data = {};
   }
   
@@ -752,7 +755,8 @@ public:
       false, // shortest_deterministic
       false, // exclusion
       false, // update_exclusion
-      "a" // escape
+      "a", // escape,
+      true // decay
   ) {
     data = {};
     buffer_length_items = decay_par["buffer_length_items"];
@@ -895,7 +899,7 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     class_<ppm>("ppm")
       // ppm class cannot be instantiated directly in R
-      .constructor<int, int, bool, bool, bool, std::string>()
+      // .constructor<int, int, bool, bool, bool, std::string>()
       .field("alphabet_size", &ppm::alphabet_size)
       .field("order_bound", &ppm::order_bound)
       .field("shortest_deterministic", &ppm::shortest_deterministic)

@@ -1,22 +1,37 @@
 library(ppm)
 library(tidyverse)
 
-x <- new(ppm_simple,
+x <- new(ppm_decay,
          alphabet_size = 200,
          order_bound = 10, 
          shortest_deterministic = FALSE,
          exclusion = TRUE,
-         update_exclusion = FALSE,
+         update_exclusion = TRUE,
          escape = "c")
+
+x <- new(ppm_decay,
+         alphabet_size = 20,
+         order_bound = 2,
+         decay_par = list(
+           buffer_length_items = 10,
+           buffer_weight = 0.75,
+           stm_half_life = 1,
+           stm_weight = 0.25,
+           ltm_weight = 0,
+           noise = 0.5
+         ))
 
 abra <- as.integer(factor(c("a", "b", "r", "a", "c", "a", "d", "a", "b", "r", "a") )) - 1L
 
-y <- x$model_seq(sample(0:19, size = 10000, replace = TRUE),
-                 time = numeric(10000),
+y <- x$model_seq(sample(0:5, size = 100, replace = TRUE),
+                 time = 1:100,
                  train = TRUE, 
                  predict = TRUE, 
                  keep_distribution = FALSE, 
                  keep_entropy = FALSE)
+x$as_tibble() %>% View
+y$as_tibble() %>% View
+
 y$distribution
 
 

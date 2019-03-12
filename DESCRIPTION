@@ -8,7 +8,9 @@ Maintainer: Your Name <your@email.com>
 Description: One paragraph description of what the package does as one or more full sentences.
 License: MIT + file LICENSE
 Imports: 
-    Rcpp, BH
+    Rcpp,
+    BH,
+    tibble
 LinkingTo: Rcpp, BH, testthat
 RoxygenNote: 6.1.1
 Encoding: UTF-8
