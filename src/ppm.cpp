@@ -18,7 +18,7 @@ using namespace Rcpp;
 
 typedef std::vector<int> sequence;
 
-sequence subseq(const sequence &x, int first, int last) {
+sequence subseq(const sequence &x, unsigned int first, unsigned int last) {
   if (first < 0 || last >= x.size() || last < first) {
     stop("invalid subsequence indices");
   }
@@ -51,7 +51,7 @@ sequence last_n (const sequence &x, int n) {
 }
 
 void print(const sequence &x) {
-  for (int j = 0; j < x.size(); j ++) {
+  for (unsigned int j = 0; j < x.size(); j ++) {
     if (j > 0) {
       std::cout << " ";
     }
@@ -61,7 +61,7 @@ void print(const sequence &x) {
 }
 
 void print(const std::vector<double> &x) {
-  for (int j = 0; j < x.size(); j ++) {
+  for (unsigned int j = 0; j < x.size(); j ++) {
     if (j > 0) {
       std::cout << " ";
     }
@@ -302,7 +302,9 @@ public:
                                 bool return_distribution = true,
                                 bool return_entropy = true) {
     int n = x.size();
-    if (this->decay && x.size() != time.size()) {
+    if (this->decay && 
+        (static_cast<unsigned int>(x.size()) != 
+        static_cast<unsigned int>(time.size()))) {
       stop("time must either have length 0 or have length equal to x");
     }
     sequence_prediction result(return_entropy,
