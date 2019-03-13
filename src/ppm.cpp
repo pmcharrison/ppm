@@ -6,6 +6,9 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include <random>
 #include <cmath>
 #include <iostream>
@@ -299,6 +302,17 @@ public:
     return 0.0;
   };
   
+  double get_context_count(const std::vector<double> &counts, 
+                           const std::vector<bool> &excluded) {
+    double context_count = 0;
+    for (int i = 0; i < this->alphabet_size; i ++) {
+      if (!excluded[i]) {
+        context_count += counts[i];
+      }
+    }
+    return context_count; 
+  }
+  
   sequence_prediction model_seq(sequence x,
                                 NumericVector time = NumericVector(0),
                                 bool train = true,
@@ -401,13 +415,10 @@ public:
         counts[i] = this->modify_count(counts[i]);
       }
       
-      double context_count = 0;
-      for (int i = 0; i < this->alphabet_size; i ++) {
-        if (!excluded[i]) {
-          context_count += counts[i];
-        }
-      }
+      // Rcout << "counts: ";
+      // print(counts);
       
+      double context_count = get_context_count(counts, excluded);
       double lambda = get_lambda(counts, context_count);
       
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
@@ -467,23 +478,8 @@ public:
   // introduced by Pearce (2005)'s decision to introduce exclusion
   // (see 6.2.3.3), though the thesis does not mention
   // this explicitly.
-  double get_lambda(const std::vector<double> &counts, double context_count) {
-    std::string e = this->escape;
-    if (context_count <= 0) {
-      return 0.0;
-    } else if (e == "a") {
-      return this->lambda_a(counts, context_count);
-    } else if (e == "b") {
-      return this->lambda_b(counts, context_count);
-    } else if (e == "c") {
-      return this->lambda_c(counts, context_count);
-    } else if (e == "d") {
-      return this->lambda_d(counts, context_count);
-    } else if (e == "ax") {
-      return this->lambda_ax(counts, context_count);
-    } else {
-      stop("unrecognised escape method");
-    }
+  virtual double get_lambda(const std::vector<double> &counts, double context_count) {
+    return 0.0;
   }
   
   double get_k(const std::string &e) {
@@ -745,6 +741,29 @@ public:
     }
   }
   
+  // The need to capture situations where the context_count is 0 is
+  // introduced by Pearce (2005)'s decision to introduce exclusion
+  // (see 6.2.3.3), though the thesis does not mention
+  // this explicitly.
+  double get_lambda(const std::vector<double> &counts, double context_count) {
+    std::string e = this->escape;
+    if (context_count <= 0) {
+      return 0.0;
+    } else if (e == "a") {
+      return this->lambda_a(counts, context_count);
+    } else if (e == "b") {
+      return this->lambda_b(counts, context_count);
+    } else if (e == "c") {
+      return this->lambda_c(counts, context_count);
+    } else if (e == "d") {
+      return this->lambda_d(counts, context_count);
+    } else if (e == "ax") {
+      return this->lambda_ax(counts, context_count);
+    } else {
+      stop("unrecognised escape method");
+    }
+  }
+  
   List as_list() {
     int n = data.size();
     List n_gram(n);
@@ -782,10 +801,12 @@ public:
   double stm_weight;
   double ltm_weight;
   double noise;
+  double noise_mean; 
   std::mt19937 random_engine;
-  std::bernoulli_distribution noise_generator;
-  std::uniform_int_distribution<> alphabet_sampler;
-
+  std::normal_distribution<> noise_generator;
+  // std::bernoulli_distribution noise_generator;
+  // std::uniform_int_distribution<> alphabet_sampler;
+  
   ppm_decay(
     int alphabet_size_,
     int order_bound_,
@@ -807,19 +828,26 @@ public:
     stm_weight = decay_par["stm_weight"];
     ltm_weight = decay_par["ltm_weight"];
     noise = decay_par["noise"];
-    
+     
     if (noise < 0.0 || noise > 1.0) {
       stop("noise must be between 0 and 1");
     }
     
+    if (escape != "a") {
+      stop("escape method must be 'a' for decay-based models");
+    }
+    
+    noise_mean = noise * sqrt(2.0 / M_PI); // mean of abs(normal distribution)
+    
     std::random_device rd;
     std::mt19937 engine(rd());
-    std::bernoulli_distribution gen_bernoulli(noise);
-    std::uniform_int_distribution<int> gen_uniform_int(0, this->alphabet_size - 1);
+    std::normal_distribution<> gen{0.0, noise};
+    // std::bernoulli_distribution gen_bernoulli(noise);
+    // std::uniform_int_distribution<int> gen_uniform_int(0, this->alphabet_size - 1);
     
     random_engine = engine;
-    noise_generator = gen_bernoulli;
-    alphabet_sampler = gen_uniform_int;
+    noise_generator = gen;
+    // alphabet_sampler = gen_uniform_int;
   }
   
   ~ ppm_decay() {};
@@ -827,27 +855,27 @@ public:
   bool insert(sequence x, int pos, double time, bool full_only) {
     // Rcout << "Original sequence: ";
     // print(x);
-      
-    sequence noisy_x = x;
-    for (unsigned int i = 0; i < x.size(); i ++) {
-      if (this->noise_generator(this->random_engine)) {
-        noisy_x[i] = this->alphabet_sampler(this->random_engine);
-      }
-    }
+    
+    // sequence noisy_x = x;
+    // for (unsigned int i = 0; i < x.size(); i ++) {
+    //   if (this->noise_generator(this->random_engine)) {
+    //     noisy_x[i] = this->alphabet_sampler(this->random_engine);
+    //   }
+    // } 
     
     // Rcout << "New sequence: ";
     // print(noisy_x);
     
     std::unordered_map<sequence, 
                        record_decay, 
-                       container_hash<sequence>>::const_iterator target = data.find(noisy_x);
+                       container_hash<sequence>>::const_iterator target = data.find(x);
     if (target == data.end()) {
       record_decay record;
       record.insert(pos, time);
-      data[noisy_x] = record;
+      data[x] = record;
       return false;
     } else {
-      data[noisy_x].insert(pos, time);
+      data[x].insert(pos, time);
       return true;
     }
   }
@@ -888,7 +916,7 @@ public:
       } else {
         buffer_fail_time = temporal_buffer_fail_time;
       }
-
+      
       double time_since_buffer_fail = time - buffer_fail_time;
       
       // Rcout << "pos = " << pos << "\n";
@@ -907,9 +935,11 @@ public:
         weight += this->decay_exp(time_since_buffer_fail);
       }
     }
-    // double noise = this->noise_generator(this->random_engine);
-    // Rcout << "noise = " << noise << "\n";
-    // weight += noise;
+    
+    // Rcout << "original weight = " << noise << "\n";
+    double noise = fabs(this->noise_generator(this->random_engine));
+    // Rcout << "noise = " << noise << "\n\n";
+    weight += noise;
     // return std::max(0.0, weight);
     return weight;
   };
@@ -922,6 +952,22 @@ public:
         exp(- lambda * elapsed_time);
   }
   
+  double get_lambda(const std::vector<double> &counts, double context_count) {
+    double total_expected_noise = this->noise_mean * this->alphabet_size;
+    double adj_context_count = std::max(context_count - total_expected_noise,
+                                        0.0);
+    
+    // Rcout << "original context count = " << context_count << "\n";
+    // Rcout << "total_expected_noise = " << total_expected_noise << "\n";
+    // Rcout << "adj_context_count = " << adj_context_count << "\n\n";
+    
+    if (context_count <= 0) {
+      return 0.0;
+    } else {
+      return this->lambda_a(counts, adj_context_count);
+    }
+  }
+  
   record_decay get(const sequence &x) {
     std::unordered_map<sequence, 
                        record_decay, 
@@ -932,7 +978,7 @@ public:
     } else {
       return(target->second);
     }
-  }
+  } 
   
   List as_list() {
     int n = data.size();
@@ -1019,6 +1065,7 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("stm_weight", &ppm_decay::stm_weight)
       .field("ltm_weight", &ppm_decay::ltm_weight)
       .field("noise", &ppm_decay::noise)
+      .field("noise_mean", &ppm_decay::noise_mean)
     ;
     
     class_<record_decay>("record_decay")
@@ -1028,3 +1075,4 @@ RCPP_EXPOSED_CLASS(record_decay)
       .method("insert", &record_decay::insert)
     ;
   }
+
