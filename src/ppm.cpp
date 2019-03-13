@@ -53,21 +53,21 @@ sequence last_n (const sequence &x, int n) {
 void print(const sequence &x) {
   for (unsigned int j = 0; j < x.size(); j ++) {
     if (j > 0) {
-      std::cout << " ";
+      Rcout << " ";
     }
-    std::cout << x[j];
+    Rcout << x[j];
   }
-  std::cout << "\n";
+  Rcout << "\n";
 }
 
 void print(const std::vector<double> &x) {
   for (unsigned int j = 0; j < x.size(); j ++) {
     if (j > 0) {
-      std::cout << " ";
+      Rcout << " ";
     }
-    std::cout << x[j];
+    Rcout << x[j];
   }
-  std::cout << "\n";
+  Rcout << "\n";
 }
 
 RObject list_to_tibble(List x) {
@@ -154,7 +154,7 @@ public:
                     const std::vector<double> &distribution_) {
     int dist_size_ = distribution_.size();
     if (symbol_ > dist_size_) {
-      std::cout << "symbol = " << symbol_ << ", distribution(n) = " << distribution_.size() << "\n";
+      Rcout << "symbol = " << symbol_ << ", distribution(n) = " << distribution_.size() << "\n";
       stop("observed symbol not compatible with distribution dimensions");
     }
     
@@ -270,6 +270,10 @@ public:
       std::string escape_,
       bool decay_
   ) {
+    if (alphabet_size_ <= 0) {
+      stop("alphabet size must be greater than 0");
+    }
+    
     alphabet_size = alphabet_size_;
     order_bound = order_bound_;
     shortest_deterministic = shortest_deterministic_;
@@ -408,21 +412,21 @@ public:
       
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
       
-      // std::cout << "pos = " << pos << "\n";
-      // std::cout << "model_order.chosen = " << model_order.chosen << "\n";
-      // std::cout << "this->shortest_deterministic = " << this->shortest_deterministic << "\n";
-      // std::cout << "this->update_exclusion = " << this->update_exclusion << "\n";
-      // std::cout << "model_order.deterministic_is_selected = " << model_order.deterministic_is_selected << "\n";
-      // std::cout << "context = ";
+      // Rcout << "pos = " << pos << "\n";
+      // Rcout << "model_order.chosen = " << model_order.chosen << "\n";
+      // Rcout << "this->shortest_deterministic = " << this->shortest_deterministic << "\n";
+      // Rcout << "this->update_exclusion = " << this->update_exclusion << "\n";
+      // Rcout << "model_order.deterministic_is_selected = " << model_order.deterministic_is_selected << "\n";
+      // Rcout << "context = ";
       // print(last_n(context, order));
-      // std::cout << "update_excluded = " << update_excluded << "\n";
-      // std::cout << "counts = ";
+      // Rcout << "update_excluded = " << update_excluded << "\n";
+      // Rcout << "counts = ";
       // print(counts);
-      // std::cout << "context_count = " << context_count << "\n";
-      // std::cout << "order = " << order << ", lambda = " << lambda << "\n";
-      // std::cout << "alphas = ";
+      // Rcout << "context_count = " << context_count << "\n";
+      // Rcout << "order = " << order << ", lambda = " << lambda << "\n";
+      // Rcout << "alphas = ";
       // print(alphas);
-      // std::cout << "\n";
+      // Rcout << "\n";
       
       if (this->exclusion) {
         for (int i = 0; i < alphabet_size; i ++) {
@@ -607,16 +611,16 @@ public:
     if (this->decay) {
       return context.size();
     } else {
-      // std::cout << "get_longest_context...\n";
+      // Rcout << "get_longest_context...\n";
       int context_len = static_cast<int>(context.size());
       int upper_bound = std::min(order_bound, context_len);
       
       for (int order = upper_bound; order >= 0; order --) {
-        // std::cout << "Checking order = " << order << "\n";
+        // Rcout << "Checking order = " << order << "\n";
         sequence x = order == 0 ? sequence() : subseq(context,
                                            context_len - order,
                                            context_len - 1);
-        // std::cout << "Truncated context = ";
+        // Rcout << "Truncated context = ";
         // print(x);
         // Skip this iteration if the context doesn't exist in the tree
         if (order > 0 && // we don't store 0-grams in the tree
@@ -625,7 +629,7 @@ public:
                              0, // time - irrelevant for non-decay-based models
                              false) // update exclusion
               == 0.0) {
-          // std::cout << "Couldn't find context in the tree\n";
+          // Rcout << "Couldn't find context in the tree\n";
           continue;
         }
         // Skip this iteration if we can't find a continuation for that context
@@ -639,13 +643,13 @@ public:
           }
         }
         if (! any_continuation) {
-          // std::cout << "Couldn't find any continuations for this context\n";
+          // Rcout << "Couldn't find any continuations for this context\n";
           continue;
         }
-        // std::cout << "Couldn't find a problem with this context\n";
+        // Rcout << "Couldn't find a problem with this context\n";
         return(order);
       }
-      // std::cout << "Escaped to order = -1\n";
+      // Rcout << "Escaped to order = -1\n";
       return(- 1);
     }
   }
@@ -779,7 +783,8 @@ public:
   double ltm_weight;
   double noise;
   std::mt19937 random_engine;
-  std::normal_distribution<> noise_generator;
+  std::bernoulli_distribution noise_generator;
+  std::uniform_int_distribution<> alphabet_sampler;
 
   ppm_decay(
     int alphabet_size_,
@@ -803,27 +808,46 @@ public:
     ltm_weight = decay_par["ltm_weight"];
     noise = decay_par["noise"];
     
+    if (noise < 0.0 || noise > 1.0) {
+      stop("noise must be between 0 and 1");
+    }
+    
     std::random_device rd;
     std::mt19937 engine(rd());
-    std::normal_distribution<> gen(0, noise);
+    std::bernoulli_distribution gen_bernoulli(noise);
+    std::uniform_int_distribution<int> gen_uniform_int(0, this->alphabet_size - 1);
     
     random_engine = engine;
-    noise_generator = gen;
+    noise_generator = gen_bernoulli;
+    alphabet_sampler = gen_uniform_int;
   }
   
   ~ ppm_decay() {};
   
   bool insert(sequence x, int pos, double time, bool full_only) {
+    // Rcout << "Original sequence: ";
+    // print(x);
+      
+    sequence noisy_x = x;
+    for (unsigned int i = 0; i < x.size(); i ++) {
+      if (this->noise_generator(this->random_engine)) {
+        noisy_x[i] = this->alphabet_sampler(this->random_engine);
+      }
+    }
+    
+    // Rcout << "New sequence: ";
+    // print(noisy_x);
+    
     std::unordered_map<sequence, 
                        record_decay, 
-                       container_hash<sequence>>::const_iterator target = data.find(x);
+                       container_hash<sequence>>::const_iterator target = data.find(noisy_x);
     if (target == data.end()) {
       record_decay record;
       record.insert(pos, time);
-      data[x] = record;
+      data[noisy_x] = record;
       return false;
     } else {
-      data[x].insert(pos, time);
+      data[noisy_x].insert(pos, time);
       return true;
     }
   }
@@ -844,7 +868,7 @@ public:
     
     double weight = 0.0;
     for (int i = 0; i < n; i ++) {
-      // std::cout << "i = " << i << ": \n";
+      // Rcout << "i = " << i << ": \n";
       if (data_time[i] > time) {
         stop("tried to predict using training data from the future");
       }
@@ -858,7 +882,7 @@ public:
       
       if (item_buffer_failed) {
         double time_when_item_buffer_failed = this->all_time[pos_item_buffer_fails];
-        // std::cout << "time_when_item_buffer_failed = " << time_when_item_buffer_failed << "\n";
+        // Rcout << "time_when_item_buffer_failed = " << time_when_item_buffer_failed << "\n";
         buffer_fail_time = std::min(time_when_item_buffer_failed,
                                     temporal_buffer_fail_time);
       } else {
@@ -867,15 +891,15 @@ public:
 
       double time_since_buffer_fail = time - buffer_fail_time;
       
-      // std::cout << "pos = " << pos << "\n";
-      // std::cout << "time = " << time << "\n";
-      // std::cout << "N = " << N << "\n";
-      // std::cout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
-      // std::cout << "this->buffer_length_items = " << this->buffer_length_items << "\n";
-      // std::cout << "item_buffer_failed = " << item_buffer_failed << "\n";
-      // std::cout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
-      // std::cout << "buffer_fail_time = " << buffer_fail_time << "\n";
-      // std::cout << "time_since_buffer_fail = " << time_since_buffer_fail << "\n";
+      // Rcout << "pos = " << pos << "\n";
+      // Rcout << "time = " << time << "\n";
+      // Rcout << "N = " << N << "\n";
+      // Rcout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
+      // Rcout << "this->buffer_length_items = " << this->buffer_length_items << "\n";
+      // Rcout << "item_buffer_failed = " << item_buffer_failed << "\n";
+      // Rcout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
+      // Rcout << "buffer_fail_time = " << buffer_fail_time << "\n";
+      // Rcout << "time_since_buffer_fail = " << time_since_buffer_fail << "\n";
       
       if (time_since_buffer_fail < 0) {
         weight += this->buffer_weight;
@@ -883,10 +907,11 @@ public:
         weight += this->decay_exp(time_since_buffer_fail);
       }
     }
-    double noise = this->noise_generator(this->random_engine);
-    // std::cout << "noise = " << noise << "\n";
-    weight += noise;
-    return std::max(0.0, weight);
+    // double noise = this->noise_generator(this->random_engine);
+    // Rcout << "noise = " << noise << "\n";
+    // weight += noise;
+    // return std::max(0.0, weight);
+    return weight;
   };
   
   double decay_exp(double elapsed_time) {
