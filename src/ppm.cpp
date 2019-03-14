@@ -829,8 +829,8 @@ public:
     ltm_weight = decay_par["ltm_weight"];
     noise = decay_par["noise"];
      
-    if (noise < 0.0 || noise > 1.0) {
-      stop("noise must be between 0 and 1");
+    if (noise < 0.0) {
+      stop("noise must be greater than or equal to zero");
     }
     
     if (escape != "a") {
@@ -919,7 +919,7 @@ public:
       
       double time_since_buffer_fail = time - buffer_fail_time;
       
-      // Rcout << "pos = " << pos << "\n";
+      // Rcout << "\n\npos = " << pos << "\n"; 
       // Rcout << "time = " << time << "\n";
       // Rcout << "N = " << N << "\n";
       // Rcout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
@@ -930,8 +930,10 @@ public:
       // Rcout << "time_since_buffer_fail = " << time_since_buffer_fail << "\n";
       
       if (time_since_buffer_fail < 0) {
+        // Rcout << "buffer didn't fail\n";
         weight += this->buffer_weight;
       } else {
+        // Rcout << "buffer failed\n";
         weight += this->decay_exp(time_since_buffer_fail);
       }
     }
