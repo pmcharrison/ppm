@@ -829,9 +829,9 @@ public:
     ltm_weight = decay_par["ltm_weight"];
     noise = decay_par["noise"];
      
-    if (noise < 0.0) {
-      stop("noise must be greater than or equal to zero");
-    }
+    // if (noise < 0.0) {
+    //   stop("noise must be greater than or equal to zero");
+    // }
     
     if (escape != "a") {
       stop("escape method must be 'a' for decay-based models");
