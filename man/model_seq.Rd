@@ -4,12 +4,61 @@
 \alias{model_seq}
 \title{Model sequence}
 \usage{
-model_seq(model, seq, time = NULL, train = TRUE, predict = TRUE,
-  return_distribution = TRUE, return_entropy = TRUE)
+model_seq(model, seq, time = NULL, zero_indexed = FALSE,
+  train = TRUE, predict = TRUE, return_distribution = TRUE,
+  return_entropy = TRUE)
+}
+\arguments{
+\item{model}{A PPM model object as produced by (for example)
+\code{\link{new_ppm_simple}} or \code{\link{new_ppm_decay}}.}
+
+\item{seq}{An integer vector defining the input sequence
+(equivalently a numeric vector containing solely integers,
+or a factor vector, both of which which will be coerced to integer vectors).}
+
+\item{time}{(NULL or a numeric vector)
+Timepoints corresponding to each element of the argument \code{seq}.
+Only used by certain model types (e.g. decay-based models).}
+
+\item{zero_indexed}{(Logical scalar)
+Whether or not the \code{seq} argument is 0-indexed
+(i.e. drawn from an alphabet with a minimum value of 0).
+If FALSE, it is assumed that the sequence is 1-indexed
+(i.e. drawn from an alphabet with a minimum value of 1).}
+
+\item{train}{(Logical scalar)
+Whether or not the model should learn from the incoming sequence.}
+
+\item{predict}{(Logical scalar)
+Whether or not to generate predictions for each element of
+the incoming sequence.}
+
+\item{return_distribution}{(Logical scalar)
+Whether or not to return the conditional distribution over each
+potential continuation as part of the model output
+(ignored if \code{predict = FALSE}).}
+
+\item{return_entropy}{(Logical scalar)
+Whether or not to return the entropy of each event prediction
+(ignored if \code{predict = FALSE}).}
 }
 \value{
-a \code{\link[tibble]{tibble}}.
+A \code{\link[tibble]{tibble}} which will be empty if \code{predict = FALSE}
+and otherwise will contain one row for each element in the sequence,
+with the following columns:
+\itemize{
+\item \code{symbol} - the symbol being predicted. This should be identical
+to the input argument \code{seq}, with indexing determined by
+the argument \code{0-indexed}.
+\item \code{model_order} - the model order used for generating predictions.
+\item \code{information_content} - the information content
+(i.e. negative log probability, base 2) of the observed symbol.
+\item \code{entropy} - the expected information content when
+predicting the symbol.
+\item \code{distribution} - the predictive probability distribution for the
+symbol, conditioned on the preceding symbols.
+}
 }
 \description{
-Models a sequence using a PPM model.
+Analyses a sequence using a PPM model.
 }

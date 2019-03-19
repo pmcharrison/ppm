@@ -22,7 +22,7 @@ test_that("abra", {
                      noise = 0)
   
   lapply(0:1, function(i) {
-    model_seq(m, abra, time = 0:10 + i * 11)
+    model_seq(m, abra, time = 0:10 + i * 11, zero_indexed = TRUE)
   }) %>% do.call(rbind, .) %>% `$`(distribution) %>% 
     expect_equal(
       list(c(0.2, 0.2, 0.2, 0.2, 0.2), 
@@ -88,7 +88,7 @@ test_that("no decay", {
                      ltm_weight = 1, 
                      noise = 0)
   lapply(0:1, function(i) {
-    model_seq(m, abra, time = 0:10 + i * 11)
+    model_seq(m, abra, time = 0:10 + i * 11, zero_indexed = TRUE)
   }) %>% do.call(rbind, .) %>% 
     `$`(distribution) %>% 
     expect_equal(
@@ -166,7 +166,7 @@ if (require("PPMdecay")) {
                         ltm_weight = ltm_weight,
                         noise = noise)
     res1 <- lapply(0:1, function(i) {
-      model_seq(m1, abra, time = 0:10 + i * 11)
+      model_seq(m1, abra, time = 0:10 + i * 11, zero_indexed = TRUE)
     }) %>% do.call(rbind, .)
     
     m2 <- new_model(alphabet = c("a", "b", "c", "d", "r"), 

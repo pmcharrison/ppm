@@ -1,20 +1,27 @@
 Package: ppm
 Type: Package
-Title: What the Package Does in One 'Title Case' Line
-Version: 1.0
+Title: Prediction by Partial Matching
+Version: 0.0.0
 Date: 2019-03-08
-Author: Your Name
-Maintainer: Your Name <your@email.com>
-Description: One paragraph description of what the package does as one or more full sentences.
+Author: Peter M. C. Harrison
+Maintainer: Peter M. C. Harrison <pmc.harrison@gmail.com>
+Description: Implements variants of the Prediction by Partial Matching algorithm.
 License: MIT + file LICENSE
 Imports: 
+    Rcpp (>= 1.0.0),
+    BH (>= 1.69.0.1),
+    tibble (>= 2.0.1),
+    methods,
+    checkmate (>= 1.9.1),
+    Rdpack (>= 0.10.1)
+RdMacros: Rdpack
+LinkingTo: 
     Rcpp,
     BH,
-    tibble
-LinkingTo: Rcpp, BH, testthat
+    testthat
 RoxygenNote: 6.1.1
 Encoding: UTF-8
 SystemRequirements: C++11
 Suggests: 
-    testthat,
-    magrittr
+    testthat (>= 2.0.1),
+    magrittr (>= 1.5)

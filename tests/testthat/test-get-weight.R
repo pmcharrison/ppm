@@ -9,7 +9,10 @@ test_that("misc", {
                 noise = 0,
                 ...) {
     mod <- new_ppm_decay(alphabet_size = alphabet_size, noise = noise, ...)
-    model_seq(mod, seq, time = data_time, train = TRUE, predict = FALSE)
+    model_seq(mod, seq, time = data_time, 
+              train = TRUE,
+              predict = FALSE, 
+              zero_indexed = TRUE)
     get_weight(mod, n_gram, pos = pos, time = time, update_excluded = FALSE)
   }
   

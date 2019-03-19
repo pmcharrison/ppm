@@ -4,8 +4,8 @@
 \name{ppm-package}
 \alias{ppm}
 \alias{ppm-package}
-\title{ppm: What the Package Does in One 'Title Case' Line}
+\title{ppm: Prediction by Partial Matching}
 \description{
-One paragraph description of what the package does as one or more full sentences.
+Implements variants of the Prediction by Partial Matching algorithm.
 }
 \keyword{internal}

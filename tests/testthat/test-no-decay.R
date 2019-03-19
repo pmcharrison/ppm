@@ -11,7 +11,7 @@ test_ppm <- function(seqs, answer, tolerance = 1e-4, alphabet = NULL, ...) {
   res <- list()
   for (i in seq_along(seqs)) {
     seq <- as.integer(factor(seqs[[i]], levels = alphabet)) - 1L
-    res[[i]] <- model_seq(model = model, seq = seq)
+    res[[i]] <- model_seq(model = model, seq = seq, zero_indexed = TRUE)
   }
   for (i in seq_along(res)) {
     expect_equal(nrow(res[[i]]), length(answer[[i]]))
@@ -32,7 +32,7 @@ test_ppm2 <- function(seqs, answer, tolerance = 1e-4, alphabet = NULL, ...) {
   res <- rep(as.numeric(NA), times = length(seqs))
   for (i in seq_along(seqs)) {
     seq <- as.integer(factor(seqs[[i]], levels = alphabet)) - 1L
-    tmp <- model_seq(model = model, seq = seq)
+    tmp <- model_seq(model = model, seq = seq, zero_indexed = TRUE)
     res[i] <- mean(tmp$information_content)
   }
   expect_equal(res, answer, tolerance = tolerance)

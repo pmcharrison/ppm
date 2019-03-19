@@ -8,15 +8,3 @@ NULL
 NULL
 
 Rcpp::loadModule("ppm", TRUE)
-
-#' @name ppm
-#' @export
-NULL
-
-#' @name ppm_simple
-#' @export
-NULL
-
-#' @name ppm_decay
-#' @export
-NULL

@@ -6,7 +6,7 @@ test_decay <- function(seq, time, ...) {
   alphabet <- seq %>% unique %>% sort
   m <- new_ppm_decay(alphabet_size = length(alphabet), ...)
   seq <- factor(seq, levels = alphabet) %>% as.integer() %>% subtract(1L)
-  model_seq(m, seq, time)
+  model_seq(m, seq, time, zero_indexed = TRUE)
 }
 
 test_that("simple tests", {
