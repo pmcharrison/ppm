@@ -7,8 +7,10 @@ test_that("misc", {
                 data_time, 
                 alphabet_size = 100,
                 noise = 0,
+                order_bound = 3,
                 ...) {
-    mod <- new_ppm_decay(alphabet_size = alphabet_size, noise = noise, ...)
+    mod <- new_ppm_decay(alphabet_size = alphabet_size, noise = noise, 
+                         order_bound = order_bound, ...)
     model_seq(mod, seq, time = data_time, 
               train = TRUE,
               predict = FALSE, 
@@ -101,7 +103,7 @@ test_that("misc", {
     stm_weight = 1,
     ltm_weight = 0,
     noise = 0) %>% expect_equal(10 + 0.25)
-
+  
   ## Time buffers
   f(seq = rep(1, times = 10),
     n_gram = 1,
@@ -121,6 +123,66 @@ test_that("misc", {
         decay_exp(0.5, 1, 1, 0) +
         6
     })
+  
+  ## Buffers with longer n-grams
+  
+  # With a buffer of length 4,
+  # an n-gram of length 2 with its final symbol at pos = 1
+  # should still be in the buffer two symbols later (pos = 3)
+  # and quit it at pos = 4.
+  
+  f(seq = 1:4,
+    n_gram = c(1, 2),
+    pos = 3, time = 3,
+    data_time = 0:3, 
+    buffer_length_time = 999999,
+    buffer_length_items = 4,
+    buffer_weight = 1,
+    stm_half_life = 1,
+    stm_weight = 0.1,
+    ltm_weight = 0,
+    noise = 0) %>% expect_equal(1)
+  
+  f(seq = 1:5, # <------
+    n_gram = c(1, 2),
+    pos = 4, time = 4, # <------
+    data_time = 0:4, # <------
+    buffer_length_time = 999999,
+    buffer_length_items = 4,
+    buffer_weight = 1,
+    stm_half_life = 1,
+    stm_weight = 0.1,
+    ltm_weight = 0,
+    noise = 0) %>% expect_equal(0.1)
+  
+  # With a buffer of time length 4,
+  # an n-gram of length 2 with its first symbol at pos/time = 1
+  # should still be in the buffer at time = 4
+  # and quit it at time = 5
+  
+  f(seq = 1:6,
+    n_gram = c(2, 3),
+    pos = 4, time = 4,
+    data_time = 0:5, 
+    buffer_length_time = 4,
+    buffer_length_items = 1000,
+    buffer_weight = 1,
+    stm_half_life = 1,
+    stm_weight = 0.1,
+    ltm_weight = 0,
+    noise = 0) %>% expect_equal(1)
+  
+  f(seq = 1:6,
+    n_gram = c(2, 3),
+    pos = 5, time = 5,
+    data_time = 0:5, 
+    buffer_length_time = 4,
+    buffer_length_items = 1000,
+    buffer_weight = 1,
+    stm_half_life = 1,
+    stm_weight = 0.1,
+    ltm_weight = 0,
+    noise = 0) %>% expect_equal(0.1)
   
   ## Buffer rate
   f(seq = rep(1, times = 10),

@@ -1,10 +1,11 @@
 context("test-noise")
 
 test_that("misc", {
-  x <- new_ppm_decay(20, noise = 0.1, buffer_weight = 1)
-  x$insert(1:3, 0L, 0L, FALSE)
+  x <- new_ppm_decay(20, noise = 0.1, buffer_weight = 1, stm_weight = 1, ltm_weight = 1)
+  model_seq(x, 0:2, time = 0:2, predict = FALSE, zero_indexed = TRUE)
+  
   y <- vapply(1:1e5, function(i) {
-    x$get_weight(1:3, 0, 0, TRUE)
+    x$get_weight(0:1, 2, 2, TRUE)
   }, numeric(1))
   
   expect_equal(
@@ -12,7 +13,6 @@ test_that("misc", {
     1 + x$noise_mean,
     tolerance = 1e-2
   )
-  
 })
 
 

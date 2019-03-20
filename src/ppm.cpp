@@ -134,10 +134,10 @@ class record_decay: public record {
 public:
   record_decay() {}
   std::vector<int> pos;
-  std::vector<double> time;
+  // std::vector<double> time;
   void insert(int pos_, double time_) {
     pos.push_back(pos_);
-    time.push_back(time_);
+    // time.push_back(time_);
   }
 };
 
@@ -837,6 +837,10 @@ public:
       stop("escape method must be 'a' for decay-based models");
     }
     
+    if (buffer_length_items - 1 < order_bound) {
+      stop("order bound cannot be greater than buffer_length_items - 1");
+    }
+    
     noise_mean = noise * sqrt(2.0 / M_PI); // mean of abs(normal distribution)
     
     std::random_device rd;
@@ -884,29 +888,43 @@ public:
                     int pos, 
                     double time,
                     bool update_excluded) {
-    record_decay record = this->get(n_gram);
-    std::vector<int> data_pos = record.pos;
-    std::vector<double> data_time = record.time;
+    record_decay data = this->get(n_gram);
     
-    if (data_pos.size() != data_time.size()) {
-      stop("data_pos and data_time must have identical sizes");
-    }
+    // if (data.pos.size() != data.time.size()) {
+    //   stop("data.pos and data.time must have identical sizes");
+    // }
     int N = static_cast<int>(this->all_time.size());
-    int n = static_cast<int>(data_pos.size());
+    int n = static_cast<int>(data.pos.size());
     
     double weight = 0.0;
     for (int i = 0; i < n; i ++) {
       // Rcout << "i = " << i << ": \n";
-      if (data_time[i] > time) {
+      if (data.pos[i] > pos) {
         stop("tried to predict using training data from the future");
       }
-      if (data_pos[i] < 0) {
-        stop("data_pos cannot be less than 0");
+      if (data.pos[i] < 0) {
+        stop("data.pos cannot be less than 0");
       }
-      int pos_item_buffer_fails = data_pos[i] + this->buffer_length_items;
+      // Original buffer version
+      // int pos_item_buffer_fails = data.pos[i] + this->buffer_length_items;
+      // double temporal_buffer_fail_time = data.time[i] + this->buffer_length_time;
+      
+      int pos_item_buffer_fails = data.pos[i] + 
+        this->buffer_length_items - static_cast<int>(n_gram.size()) + 1;
       bool item_buffer_failed = pos_item_buffer_fails <= N - 1;
-      double temporal_buffer_fail_time = data_time[i] + this->buffer_length_time;
+      
+      int pos_n_gram_began = data.pos[i] - static_cast<int>(n_gram.size()) + 1;
+      if (pos_n_gram_began < 0 || 
+          pos_n_gram_began > static_cast<int>(this->all_time.size()) - 1)
+        stop("invalid value of pos_n_gram_began");
+      
+      double temporal_buffer_fail_time = 
+        this->all_time[pos_n_gram_began] + this->buffer_length_time;
+
       double buffer_fail_time; 
+      
+      // Rcout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
+      // Rcout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
       
       if (item_buffer_failed) {
         double time_when_item_buffer_failed = this->all_time[pos_item_buffer_fails];
@@ -992,7 +1010,7 @@ public:
     for(auto kv : data) {
       n_gram[i] = kv.first;
       pos[i] = kv.second.pos;
-      time[i] = kv.second.time;
+      time[i] = this->all_time[pos[i]];
       i ++;
     } 
     
@@ -1043,7 +1061,7 @@ RCPP_EXPOSED_CLASS(record_decay)
          .field("update_exclusion", &ppm::update_exclusion)
          .field("escape", &ppm::escape)
          .method("model_seq", &ppm::model_seq)
-         .method("insert", &ppm::insert)
+         // .method("insert", &ppm::insert)
          .method("get_weight", &ppm::get_weight)
       ;
     
@@ -1073,7 +1091,7 @@ RCPP_EXPOSED_CLASS(record_decay)
     class_<record_decay>("record_decay")
       .constructor()
       .field("pos", &record_decay::pos)
-      .field("time", &record_decay::time)
+      // .field("time", &record_decay::   time)
       .method("insert", &record_decay::insert)
     ;
   }

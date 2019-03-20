@@ -2,9 +2,9 @@ context("test-decay")
 
 library(magrittr)
 
-test_decay <- function(seq, time, ...) {
+test_decay <- function(seq, time, order_bound = 3, ...) {
   alphabet <- seq %>% unique %>% sort
-  m <- new_ppm_decay(alphabet_size = length(alphabet), ...)
+  m <- new_ppm_decay(alphabet_size = length(alphabet), order_bound = order_bound, ...)
   seq <- factor(seq, levels = alphabet) %>% as.integer() %>% subtract(1L)
   model_seq(m, seq, time, zero_indexed = TRUE)
 }
@@ -74,10 +74,8 @@ test_that("simple tests", {
   y <- paste(if (interactive()) "tests/testthat/",
              "data/decay-regression-1.rds", 
              sep = "") %>% 
-    readRDS() %>% 
-    `[[`(1) %>% 
-    `$`(distribution) %>% 
-    lapply(function(.) magrittr::set_names(., NULL))
+    readRDS()
   
   expect_equal(x, y)
 })
+
