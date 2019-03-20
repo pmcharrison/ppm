@@ -342,12 +342,12 @@ public:
       }
       // Train
       if (train) {
+        if (decay) this->all_time.push_back(time_i);
         bool full_only = false;
         for (int h = std::max(0, i - order_bound); h <= i; h ++) {
           full_only = this->insert(subseq(x, h, i), pos_i, time_i, full_only);
         }
         num_observations ++;
-        if (decay) this->all_time.push_back(time_i);
       }
     }
     return(result);
@@ -859,28 +859,35 @@ public:
   bool insert(sequence x, int pos, double time, bool full_only) {
     // Rcout << "Original sequence: ";
     // print(x);
-    
     // sequence noisy_x = x;
     // for (unsigned int i = 0; i < x.size(); i ++) {
     //   if (this->noise_generator(this->random_engine)) {
     //     noisy_x[i] = this->alphabet_sampler(this->random_engine);
     //   }
     // } 
-    
     // Rcout << "New sequence: ";
     // print(noisy_x);
-    
-    std::unordered_map<sequence, 
-                       record_decay, 
-                       container_hash<sequence>>::const_iterator target = data.find(x);
-    if (target == data.end()) {
-      record_decay record;
-      record.insert(pos, time);
-      data[x] = record;
-      return false;
-    } else {
-      data[x].insert(pos, time);
+  
+    // Only insert the n-gram if it fit completely within the buffer.
+    int n_gram_length = x.size();
+    int pos_n_gram_begin = pos - n_gram_length + 1;
+    // Rcout << "pos_n_gram_begin = " << pos_n_gram_begin << "\n";
+    double time_n_gram_begin = this->all_time.at(pos_n_gram_begin);
+    if (time - time_n_gram_begin >= this->buffer_length_time) {
       return true;
+    } else {
+      std::unordered_map<sequence, 
+                         record_decay, 
+                         container_hash<sequence>>::const_iterator target = data.find(x);
+      if (target == data.end()) {
+        record_decay record;
+        record.insert(pos, time);
+        data[x] = record;
+        return false;
+      } else {
+        data[x].insert(pos, time);
+        return true;
+      }
     }
   }
   
