@@ -2,9 +2,10 @@ context("test-decay")
 
 library(magrittr)
 
-test_decay <- function(seq, time, order_bound = 3, ...) {
+test_decay <- function(seq, time, order_bound = 3, only_learn_from_buffer = FALSE, ...) {
   alphabet <- seq %>% unique %>% sort
-  m <- new_ppm_decay(alphabet_size = length(alphabet), order_bound = order_bound, ...)
+  m <- new_ppm_decay(alphabet_size = length(alphabet), order_bound = order_bound,
+                     only_learn_from_buffer = only_learn_from_buffer, ...)
   seq <- factor(seq, levels = alphabet) %>% as.integer() %>% subtract(1L)
   model_seq(m, seq, time, zero_indexed = TRUE)
 }

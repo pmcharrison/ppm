@@ -142,6 +142,7 @@ new_ppm_decay <- function(
   buffer_length_time = 2.0,
   buffer_length_items = 13L,
   buffer_weight = 0.77,
+  only_learn_from_buffer = TRUE,
   stm_half_life = 2.0,
   stm_weight = 0.53,
   ltm_weight = 0,
@@ -152,6 +153,7 @@ new_ppm_decay <- function(
   checkmate::qassert(buffer_length_time, "N1[0,)")
   checkmate::qassert(buffer_length_items, "X1[0,)")
   checkmate::qassert(buffer_weight, "N1[0,)")
+  checkmate::qassert(only_learn_from_buffer, "B1")
   checkmate::qassert(stm_half_life, "N1(0,)")
   checkmate::qassert(stm_weight, "N1[0,)")
   checkmate::qassert(ltm_weight, "N1[0,)")
@@ -161,6 +163,7 @@ new_ppm_decay <- function(
     buffer_length_time = as.numeric(buffer_length_time),
     buffer_length_items = as.integer(buffer_length_items),
     buffer_weight = as.numeric(buffer_weight),
+    only_learn_from_buffer = as.logical(only_learn_from_buffer),
     stm_half_life = as.numeric(stm_half_life),
     stm_weight = as.numeric(stm_weight),
     ltm_weight = as.numeric(ltm_weight),

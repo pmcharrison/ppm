@@ -797,11 +797,13 @@ public:
   double buffer_length_time;
   int buffer_length_items;
   double buffer_weight;
+  bool only_learn_from_buffer;
   double stm_half_life;
   double stm_weight;
   double ltm_weight;
   double noise;
   double noise_mean; 
+  
   std::mt19937 random_engine;
   std::normal_distribution<> noise_generator;
   // std::bernoulli_distribution noise_generator;
@@ -824,22 +826,21 @@ public:
     buffer_length_time = decay_par["buffer_length_time"];
     buffer_length_items = decay_par["buffer_length_items"];
     buffer_weight = decay_par["buffer_weight"];
+    only_learn_from_buffer = decay_par["only_learn_from_buffer"];
     stm_half_life = decay_par["stm_half_life"];
     stm_weight = decay_par["stm_weight"];
     ltm_weight = decay_par["ltm_weight"];
     noise = decay_par["noise"];
-     
+    
     // if (noise < 0.0) {
     //   stop("noise must be greater than or equal to zero");
     // }
     
-    if (escape != "a") {
+    if (escape != "a") 
       stop("escape method must be 'a' for decay-based models");
-    }
     
-    if (buffer_length_items - 1 < order_bound) {
-      stop("order bound cannot be greater than buffer_length_items - 1");
-    }
+    if (only_learn_from_buffer && buffer_length_items - 1 < order_bound) 
+      stop("if only_learn_from_buffer is TRUE, order bound cannot be greater than buffer_length_items - 1");;
     
     noise_mean = noise * sqrt(2.0 / M_PI); // mean of abs(normal distribution)
     
@@ -867,27 +868,33 @@ public:
     // } 
     // Rcout << "New sequence: ";
     // print(noisy_x);
-  
+    
     // Only insert the n-gram if it fit completely within the buffer.
-    int n_gram_length = x.size();
-    int pos_n_gram_begin = pos - n_gram_length + 1;
     // Rcout << "pos_n_gram_begin = " << pos_n_gram_begin << "\n";
-    double time_n_gram_begin = this->all_time.at(pos_n_gram_begin);
-    if (time - time_n_gram_begin >= this->buffer_length_time) {
-      return true;
-    } else {
-      std::unordered_map<sequence, 
-                         record_decay, 
-                         container_hash<sequence>>::const_iterator target = data.find(x);
-      if (target == data.end()) {
-        record_decay record;
-        record.insert(pos, time);
-        data[x] = record;
-        return false;
-      } else {
-        data[x].insert(pos, time);
+    
+    if (this->only_learn_from_buffer) {
+      // We skip the n-gram insertion if we find that the n-gram
+      // doesn't fit in the buffer.
+      // Note that we only have to check the temporal constraint;
+      // the positional constraint was checked when the 
+      // model's order bound was originally specified.
+      int n_gram_length = x.size();
+      int pos_n_gram_begin = pos - n_gram_length + 1;
+      double time_n_gram_begin = this->all_time.at(pos_n_gram_begin);
+      if (time - time_n_gram_begin >= this->buffer_length_time)
         return true;
-      }
+    }
+    std::unordered_map<sequence, 
+                       record_decay, 
+                       container_hash<sequence>>::const_iterator target = data.find(x);
+    if (target == data.end()) {
+      record_decay record;
+      record.insert(pos, time);
+      data[x] = record;
+      return false;
+    } else {
+      data[x].insert(pos, time);
+      return true;
     }
   }
   
@@ -917,24 +924,21 @@ public:
       // double temporal_buffer_fail_time = data.time[i] + this->buffer_length_time;
       
       int pos_item_buffer_fails = data.pos[i] + 
-        this->buffer_length_items - static_cast<int>(n_gram.size()) + 1;
+        std::max(0, this->buffer_length_items - static_cast<int>(n_gram.size()) + 1);
       bool item_buffer_failed = pos_item_buffer_fails <= N - 1;
       
       int pos_n_gram_began = data.pos[i] - static_cast<int>(n_gram.size()) + 1;
-      if (pos_n_gram_began < 0 || 
-          pos_n_gram_began > static_cast<int>(this->all_time.size()) - 1)
-        stop("invalid value of pos_n_gram_began");
       
       double temporal_buffer_fail_time = 
-        this->all_time[pos_n_gram_began] + this->buffer_length_time;
-
+        this->all_time.at(pos_n_gram_began) + this->buffer_length_time;
+      
       double buffer_fail_time; 
       
       // Rcout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
       // Rcout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
       
       if (item_buffer_failed) {
-        double time_when_item_buffer_failed = this->all_time[pos_item_buffer_fails];
+        double time_when_item_buffer_failed = this->all_time.at(pos_item_buffer_fails);
         // Rcout << "time_when_item_buffer_failed = " << time_when_item_buffer_failed << "\n";
         buffer_fail_time = std::min(time_when_item_buffer_failed,
                                     temporal_buffer_fail_time);
@@ -1068,7 +1072,7 @@ RCPP_EXPOSED_CLASS(record_decay)
          .field("update_exclusion", &ppm::update_exclusion)
          .field("escape", &ppm::escape)
          .method("model_seq", &ppm::model_seq)
-         // .method("insert", &ppm::insert)
+      // .method("insert", &ppm::insert)
          .method("get_weight", &ppm::get_weight)
       ;
     
@@ -1098,8 +1102,8 @@ RCPP_EXPOSED_CLASS(record_decay)
     class_<record_decay>("record_decay")
       .constructor()
       .field("pos", &record_decay::pos)
-      // .field("time", &record_decay::   time)
-      .method("insert", &record_decay::insert)
+    // .field("time", &record_decay::   time)
+       .method("insert", &record_decay::insert)
     ;
   }
 
