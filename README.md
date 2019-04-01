@@ -50,6 +50,7 @@ plot(seq$pos, res$information_content,
 ### PPM-Decay
 
 ``` r
+set.seed(1)
 mod_2 <- new_ppm_decay(alphabet_size = 3)
 res_2 <- model_seq(mod_2, seq$val, time = seq$time,
                    return_distribution = FALSE)
