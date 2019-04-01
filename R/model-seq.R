@@ -99,7 +99,6 @@ model_seq <- function(model,
          "'time' must be provided as a numeric vector ",
          "with the same length as 'seq'")
   
-  seq <- as.integer(seq)
   if (!zero_indexed) seq <- seq - 1L
   
   res <- model$model_seq(
