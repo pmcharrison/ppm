@@ -22,7 +22,7 @@ using namespace Rcpp;
 typedef std::vector<int> sequence;
 
 sequence subseq(const sequence &x, unsigned int first, unsigned int last) {
-  if (first < 0 || last >= x.size() || last < first) {
+  if (last >= x.size() || last < first) {
     stop("invalid subsequence indices");
   }
   int n = 1 + last - first;
