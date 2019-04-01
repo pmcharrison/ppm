@@ -1,0 +1,65 @@
+---
+output: github_document
+bibliography: inst/REFERENCES.bib
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+# ppm
+
+The `ppm` package implements variants of the Prediction by Partial Matching (PPM)
+algorithm as originally introduced by @Cleary1984,
+subsequently developed by @Bunton1996,
+and reviewed by @Pearce2005.
+
+## Installation
+
+To install from GitHub:
+
+``` r
+if (!require("devtools")) install.packages("devtools")
+devtools::install_github("pmcharrison/ppm")
+```
+
+## Example usage
+
+### Original PPM
+
+```{r, dpi = 300, out.width = "50%", fig.align = 'center', fig.width = 4, fig.height = 4}
+library(ppm)
+seq <- data.frame(
+  pos = 1:6,
+  time = 1:6,
+  val = c(1, 2, 1, 2, 1, 1)
+)
+mod <- new_ppm_simple(alphabet_size = 3)
+res <- model_seq(mod, seq$val, return_distribution = FALSE)
+
+plot(seq$pos, res$information_content,
+     xlab = "Position",
+     ylab = "Information content")
+
+```
+
+### PPM-Decay
+
+```{r, dpi = 300, out.width = "50%", fig.align = 'center', fig.width = 4, fig.height = 4}
+mod_2 <- new_ppm_decay(alphabet_size = 3)
+res_2 <- model_seq(mod_2, seq$val, time = seq$time,
+                   return_distribution = FALSE)
+
+plot(seq$pos, res_2$information_content,
+     xlab = "Position",
+     ylab = "Information content")
+
+```
+
+## References
