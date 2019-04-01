@@ -325,8 +325,8 @@ public:
         static_cast<unsigned int>(time.size()))) {
       stop("time must either have length 0 or have length equal to x");
     }
-    sequence_prediction result(return_entropy,
-                               return_distribution,
+    sequence_prediction result(return_distribution,
+                               return_entropy,
                                this->decay);
     
     for (int i = 0; i < n; i ++) {
