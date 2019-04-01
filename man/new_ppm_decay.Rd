@@ -20,6 +20,10 @@ new_ppm_decay(alphabet_size, order_bound = 10L, buffer_length_time = 2,
 
 \item{buffer_weight}{(Numeric scalar)}
 
+\item{only_learn_from_buffer}{(Logical scalar)
+If TRUE, then n-grams are only learned if they fit within
+the memory buffer.}
+
 \item{stm_half_life}{(Numeric scalar)}
 
 \item{stm_weight}{(Numeric scalar)}

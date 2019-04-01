@@ -115,6 +115,11 @@ new_ppm_simple <- function(
 #' @param buffer_weight
 #' (Numeric scalar)
 #' 
+#' @param only_learn_from_buffer
+#' (Logical scalar)
+#' If TRUE, then n-grams are only learned if they fit within
+#' the memory buffer.
+#' 
 #' @param stm_half_life
 #' (Numeric scalar)
 #' 
