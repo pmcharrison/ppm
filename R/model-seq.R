@@ -78,6 +78,8 @@ model_seq <- function(model,
   checkmate::qassert(return_entropy, "B1")
   stopifnot(is.null(time) || is.numeric(time))
   
+  seq <- as.integer(seq)
+  
   if (zero_indexed) {
     if (any(seq < 0L))
       stop("all elements of 'seq' must be greater than or equal to 0")
