@@ -24,4 +24,5 @@ Encoding: UTF-8
 SystemRequirements: C++11
 Suggests: 
     testthat (>= 2.0.1),
-    magrittr (>= 1.5)
+    magrittr (>= 1.5),
+    covr
