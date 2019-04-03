@@ -291,7 +291,7 @@ public:
   
   // returns true if the n_gram already existed in the memory bank
   virtual bool insert(sequence x, int pos, double time, bool full_only) {
-    stop("this shouldn't happen");
+    stop("this shouldn't happen (1)");
     return true;
   };
   
@@ -577,7 +577,7 @@ public:
   }
   
   model_order get_model_order(const sequence &context, int pos, double time) {
-    const int longest_available = this->get_longest_context(context);
+    const int longest_available = this->get_longest_context(context, pos, time);
     int chosen = longest_available;
     
     int det_shortest = - 1;
@@ -601,53 +601,9 @@ public:
                        det_any, det_shortest, det_is_selected));
   }
   
-  // Looks for the longest context length in the tree
-  // with a valid continuation.
-  int get_longest_context(sequence context) {
-    if (this->decay) {
-      return context.size();
-    } else {
-      // Rcout << "get_longest_context...\n";
-      int context_len = static_cast<int>(context.size());
-      int upper_bound = std::min(order_bound, context_len);
-      
-      for (int order = upper_bound; order >= 0; order --) {
-        // Rcout << "Checking order = " << order << "\n";
-        sequence x = order == 0 ? sequence() : subseq(context,
-                                           context_len - order,
-                                           context_len - 1);
-        // Rcout << "Truncated context = ";
-        // print(x);
-        // Skip this iteration if the context doesn't exist in the tree
-        if (order > 0 && // we don't store 0-grams in the tree
-            this->get_weight(x, 
-                             0, // pos - irrelevant for non-decay-based models
-                             0, // time - irrelevant for non-decay-based models
-                             false) // update exclusion
-              == 0.0) {
-          // Rcout << "Couldn't find context in the tree\n";
-          continue;
-        }
-        // Skip this iteration if we can't find a continuation for that context
-        bool any_continuation = false;
-        x.resize(order + 1);
-        for (int i = 0; i < this->alphabet_size; i ++) {
-          x[order] = i;
-          if (this->get_weight(x, 0, 0, false) > 0.0) {
-            any_continuation = true;
-            break;
-          }
-        }
-        if (! any_continuation) {
-          // Rcout << "Couldn't find any continuations for this context\n";
-          continue;
-        }
-        // Rcout << "Couldn't find a problem with this context\n";
-        return(order);
-      }
-      // Rcout << "Escaped to order = -1\n";
-      return(- 1);
-    }
+  virtual int get_longest_context(sequence context, int pos, double time) {
+    stop("this shouldn't happen (2)");
+    return 0;
   }
   
   int get_shortest_deterministic_context(const sequence &context, int pos, double time) {
@@ -722,6 +678,50 @@ public:
       return true;
     }
   }
+  
+  int get_longest_context(sequence context, int pos, double time) {
+    // Rcout << "get_longest_context...\n";
+    int context_len = static_cast<int>(context.size());
+    int upper_bound = std::min(order_bound, context_len);
+    
+    for (int order = upper_bound; order >= 0; order --) {
+      // Rcout << "Checking order = " << order << "\n";
+      sequence x = order == 0 ? sequence() : subseq(context,
+                                         context_len - order,
+                                         context_len - 1);
+      // Rcout << "Truncated context = ";
+      // print(x);
+      // Skip this iteration if the context doesn't exist in the tree
+      if (order > 0 && // we don't store 0-grams in the tree
+          this->get_weight(x, 
+                           0, // pos - irrelevant for non-decay-based models
+                           0, // time - irrelevant for non-decay-based models
+                           false) // update exclusion
+            == 0.0) {
+        // Rcout << "Couldn't find context in the tree\n";
+        continue;
+      }
+      // Skip this iteration if we can't find a continuation for that context
+      bool any_continuation = false;
+      x.resize(order + 1);
+      for (int i = 0; i < this->alphabet_size; i ++) {
+        x[order] = i;
+        if (this->get_weight(x, 0, 0, false) > 0.0) {
+          any_continuation = true;
+          break;
+        }
+      }
+      if (! any_continuation) {
+        // Rcout << "Couldn't find any continuations for this context\n";
+        continue;
+      }
+      // Rcout << "Couldn't find a problem with this context\n";
+      return(order);
+    }
+    // Rcout << "Escaped to order = -1\n";
+    return(- 1);
+  }
+  
   
   double get_weight(const sequence &n_gram, 
                     int pos, 
@@ -897,6 +897,27 @@ public:
       return true;
     }
   }
+  
+  int get_longest_context(sequence context, int pos, double time) {
+    int max_context_size = context.size();
+    if (max_context_size > this->order_bound) stop("this shouldn't happen (3)");
+    for (int context_size = max_context_size; 
+         context_size > 0;
+         context_size --) {
+      // Rcout << "context_size = " << context_size << "\n";
+      int pos_context_begin = pos - context_size;
+      // Rcout << "pos_context_begin = " << pos_context_begin << "\n";
+      // Rcout << "all_time = " << "\n";
+      // print(this->all_time);
+      double time_context_begin = this->all_time.at(pos_context_begin);
+      // Rcout << "time_context_begin = " << time_context_begin << "\n";
+      // Rcout << "pos = " << pos << "\n";
+      // Rcout << "time = " << time << "\n";
+      if (time - time_context_begin <= this->buffer_length_time)
+        return context_size;
+    }
+    return 0;
+  } 
   
   double get_weight(const sequence &n_gram, 
                     int pos, 
