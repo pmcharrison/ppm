@@ -102,18 +102,23 @@ new_ppm_simple <- function(
 #' 
 #' @param alphabet_size
 #' (Integerish scalar)
+#' The size of the alphabet from which sequences are drawn.
 #' 
 #' @param order_bound
 #' (Integerish scalar)
+#' The model's Markov order bound.
 #' 
 #' @param buffer_length_time
 #' (Numeric scalar)
+#' The model's temporal buffer capacity.
 #' 
 #' @param buffer_length_items
 #' (Integerish scalar)
+#' The model's itemwise buffer capacity.
 #' 
 #' @param buffer_weight
 #' (Numeric scalar)
+#' The weight of n-grams within the buffer.
 #' 
 #' @param only_learn_from_buffer
 #' (Logical scalar)
@@ -122,15 +127,19 @@ new_ppm_simple <- function(
 #' 
 #' @param stm_half_life
 #' (Numeric scalar)
+#' Half life of the exponential-decay phase.
 #' 
 #' @param stm_weight
 #' (Numeric scalar)
+#' The weight of n-grams immediately after leaving the buffer.
 #' 
 #' @param ltm_weight
 #' (Numeric scalar)
+#' The weight of n-grams as time approaches infinity.
 #' 
 #' @param noise
 #' (Numeric scalar)
+#' Scale parameter for the retrieval noise distribution.
 #' 
 #' @return 
 #' A PPM-decay model object. 

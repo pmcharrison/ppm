@@ -10,27 +10,36 @@ new_ppm_decay(alphabet_size, order_bound = 10L, buffer_length_time = 2,
   stm_weight = 0.53, ltm_weight = 0, noise = 0.5)
 }
 \arguments{
-\item{alphabet_size}{(Integerish scalar)}
+\item{alphabet_size}{(Integerish scalar)
+The size of the alphabet from which sequences are drawn.}
 
-\item{order_bound}{(Integerish scalar)}
+\item{order_bound}{(Integerish scalar)
+The model's Markov order bound.}
 
-\item{buffer_length_time}{(Numeric scalar)}
+\item{buffer_length_time}{(Numeric scalar)
+The model's temporal buffer capacity.}
 
-\item{buffer_length_items}{(Integerish scalar)}
+\item{buffer_length_items}{(Integerish scalar)
+The model's itemwise buffer capacity.}
 
-\item{buffer_weight}{(Numeric scalar)}
+\item{buffer_weight}{(Numeric scalar)
+The weight of n-grams within the buffer.}
 
 \item{only_learn_from_buffer}{(Logical scalar)
 If TRUE, then n-grams are only learned if they fit within
 the memory buffer.}
 
-\item{stm_half_life}{(Numeric scalar)}
+\item{stm_half_life}{(Numeric scalar)
+Half life of the exponential-decay phase.}
 
-\item{stm_weight}{(Numeric scalar)}
+\item{stm_weight}{(Numeric scalar)
+The weight of n-grams immediately after leaving the buffer.}
 
-\item{ltm_weight}{(Numeric scalar)}
+\item{ltm_weight}{(Numeric scalar)
+The weight of n-grams as time approaches infinity.}
 
-\item{noise}{(Numeric scalar)}
+\item{noise}{(Numeric scalar)
+Scale parameter for the retrieval noise distribution.}
 }
 \value{
 A PPM-decay model object. 
