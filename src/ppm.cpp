@@ -798,6 +798,7 @@ public:
   int buffer_length_items;
   double buffer_weight;
   bool only_learn_from_buffer;
+  bool only_predict_from_buffer;
   double stm_half_life;
   double stm_weight;
   double ltm_weight;
@@ -827,6 +828,7 @@ public:
     buffer_length_items = decay_par["buffer_length_items"];
     buffer_weight = decay_par["buffer_weight"];
     only_learn_from_buffer = decay_par["only_learn_from_buffer"];
+    only_predict_from_buffer = decay_par["only_predict_from_buffer"];
     stm_half_life = decay_par["stm_half_life"];
     stm_weight = decay_par["stm_weight"];
     ltm_weight = decay_par["ltm_weight"];
@@ -901,22 +903,26 @@ public:
   int get_longest_context(sequence context, int pos, double time) {
     int max_context_size = context.size();
     if (max_context_size > this->order_bound) stop("this shouldn't happen (3)");
-    for (int context_size = max_context_size; 
-         context_size > 0;
-         context_size --) {
-      // Rcout << "context_size = " << context_size << "\n";
-      int pos_context_begin = pos - context_size;
-      // Rcout << "pos_context_begin = " << pos_context_begin << "\n";
-      // Rcout << "all_time = " << "\n";
-      // print(this->all_time);
-      double time_context_begin = this->all_time.at(pos_context_begin);
-      // Rcout << "time_context_begin = " << time_context_begin << "\n";
-      // Rcout << "pos = " << pos << "\n";
-      // Rcout << "time = " << time << "\n";
-      if (time - time_context_begin <= this->buffer_length_time)
-        return context_size;
+    if (this->only_predict_from_buffer) {
+      for (int context_size = max_context_size; 
+           context_size > 0;
+           context_size --) {
+        // Rcout << "context_size = " << context_size << "\n";
+        int pos_context_begin = pos - context_size;
+        // Rcout << "pos_context_begin = " << pos_context_begin << "\n";
+        // Rcout << "all_time = " << "\n";
+        // print(this->all_time);
+        double time_context_begin = this->all_time.at(pos_context_begin);
+        // Rcout << "time_context_begin = " << time_context_begin << "\n";
+        // Rcout << "pos = " << pos << "\n";
+        // Rcout << "time = " << time << "\n";
+        if (time - time_context_begin <= this->buffer_length_time)
+          return context_size;
+      }
+      return 0;
+    } else {
+      return max_context_size;
     }
-    return 0;
   } 
   
   double get_weight(const sequence &n_gram, 
@@ -1113,6 +1119,8 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("buffer_length_time", &ppm_decay::buffer_length_time)
       .field("buffer_length_items", &ppm_decay::buffer_length_items)
       .field("buffer_weight", &ppm_decay::buffer_weight)
+      .field("only_learn_from_buffer", &ppm_decay::only_learn_from_buffer)
+      .field("only_predict_from_buffer", &ppm_decay::only_predict_from_buffer)
       .field("stm_half_life", &ppm_decay::stm_half_life)
       .field("stm_weight", &ppm_decay::stm_weight)
       .field("ltm_weight", &ppm_decay::ltm_weight)

@@ -38,4 +38,14 @@ test_that("buffer models", {
     `$`(model_order) %>% 
     max() %>% 
     expect_equal(2)
+  
+  # If we disable 'only_predict_from_buffer', these things shouldn't matter.
+  new_ppm_decay(alphabet_size = 10, 
+                buffer_length_time = 2,
+                only_predict_from_buffer = FALSE) %>% 
+    model_seq(rep(1, times = 20),
+              time = 1:20) %>% 
+    `$`(model_order) %>% 
+    max() %>% 
+    expect_equal(10)
 })
