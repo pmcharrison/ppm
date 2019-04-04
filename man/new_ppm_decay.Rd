@@ -6,8 +6,9 @@
 \usage{
 new_ppm_decay(alphabet_size, order_bound = 10L, buffer_length_time = 2,
   buffer_length_items = 13L, buffer_weight = 0.77,
-  only_learn_from_buffer = TRUE, stm_half_life = 2,
-  stm_weight = 0.53, ltm_weight = 0, noise = 0.5)
+  only_learn_from_buffer = TRUE, only_predict_from_buffer = TRUE,
+  stm_half_life = 2, stm_weight = 0.53, ltm_weight = 0,
+  noise = 0.5)
 }
 \arguments{
 \item{alphabet_size}{(Integerish scalar)
@@ -28,6 +29,12 @@ The weight of n-grams within the buffer.}
 \item{only_learn_from_buffer}{(Logical scalar)
 If TRUE, then n-grams are only learned if they fit within
 the memory buffer.}
+
+\item{only_predict_from_buffer}{(Logical scalar)
+If TRUE, then the context used for prediction is limited by the memory buffer.
+Specifically, for a context to be used for prediction,
+the first symbol within that context must still be within the buffer
+at the point immediately before the predicted event occurs.}
 
 \item{stm_half_life}{(Numeric scalar)
 Half life of the exponential-decay phase.}

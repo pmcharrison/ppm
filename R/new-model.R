@@ -9,7 +9,7 @@
 #' 
 #' @param order_bound
 #' (Integerish scalar)
-#' The model's order bound. For example, an order bound of two means
+#' The model's Markov order bound. For example, an order bound of two means
 #' that the model makes predictions based on the two preceding symbols.
 #' 
 #' @param shortest_deterministic

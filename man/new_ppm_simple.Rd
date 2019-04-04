@@ -13,7 +13,7 @@ new_ppm_simple(alphabet_size, order_bound = 10L,
 The size of the alphabet upon which the model will be trained and tested.}
 
 \item{order_bound}{(Integerish scalar)
-The model's order bound. For example, an order bound of two means
+The model's Markov order bound. For example, an order bound of two means
 that the model makes predictions based on the two preceding symbols.}
 
 \item{shortest_deterministic}{(Logical scalar)
