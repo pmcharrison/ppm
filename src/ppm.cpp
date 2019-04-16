@@ -526,7 +526,7 @@ public:
     // 0 and 1. This is a bit hacky though, and the escape method
     // should ultimately be reconfigured for new decay functions.
     return static_cast<double>(context_count) /
-      static_cast<double>(context_count + num_singletons(counts));
+      static_cast<double>(context_count + num_singletons(counts) + 1.0);
   }
   
   int num_singletons(const std::vector<double> &x) {
