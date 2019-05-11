@@ -15,7 +15,8 @@ test_that("misc", {
               train = TRUE,
               predict = FALSE, 
               zero_indexed = TRUE)
-    get_weight(mod, n_gram, pos = pos, time = time, update_excluded = FALSE)
+    get_weight(mod, n_gram, pos = pos, time = time, update_excluded = FALSE,
+               zero_indexed = TRUE)
   }
   
   decay_exp <- function(time_elapsed, half_life, start, end) {
