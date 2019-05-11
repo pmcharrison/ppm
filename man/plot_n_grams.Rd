@@ -5,7 +5,7 @@
 \title{Plot n-grams}
 \usage{
 plot_n_grams(mod, pos = 1L, time = 0, max_alphabet_size = 30L,
-  zero_indexed = FALSE)
+  zero_indexed = FALSE, heights = c(0.25, 0.75))
 }
 \arguments{
 \item{mod}{A PPM model object as produced by (for example)
@@ -30,6 +30,9 @@ If \code{zero_indexed = FALSE} (default),
 then the alphabet is mapped to ascending integers beginning at 1;
 otherwise, the alphabet is mapped to ascending integers beginning at 0
 (i.e. all symbols are decremented by 1).}
+
+\item{heights}{A numeric vector of length 2 specifying the relative heights of the 
+top and bottom plot panel respectively.}
 }
 \description{
 This function takes a trained PPM model and plots transition probabilities 

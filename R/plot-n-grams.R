@@ -44,6 +44,10 @@
 #' otherwise, the alphabet is mapped to ascending integers beginning at 0
 #' (i.e. all symbols are decremented by 1).
 #' 
+#' @param heights
+#' A numeric vector of length 2 specifying the relative heights of the 
+#' top and bottom plot panel respectively.
+#' 
 #' @export
 #' 
 #' @note 
