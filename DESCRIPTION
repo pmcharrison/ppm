@@ -13,7 +13,10 @@ Imports:
     tibble (>= 2.0.1),
     methods,
     checkmate (>= 1.9.1),
-    Rdpack (>= 0.10.1)
+    Rdpack (>= 0.10.1),
+    purrr,
+    magrittr,
+    rlang
 RdMacros: Rdpack
 LinkingTo: 
     Rcpp,
@@ -24,5 +27,7 @@ Encoding: UTF-8
 SystemRequirements: C++11
 Suggests: 
     testthat (>= 2.0.1),
-    magrittr (>= 1.5),
-    covr
+    covr,
+    dplyr,
+    ggplot2,
+    egg

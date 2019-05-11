@@ -8,3 +8,8 @@ NULL
 NULL
 
 Rcpp::loadModule("ppm", TRUE)
+
+`.` <- NULL
+
+#' @importFrom rlang ".data"
+NULL
