@@ -69,6 +69,8 @@ model_seq <- function(model,
                       predict = TRUE,
                       return_distribution = TRUE,
                       return_entropy = TRUE) {
+  seq <- as.integer(seq)
+  
   stopifnot(is_ppm(model))
   checkmate::qassert(seq, "X")
   checkmate::qassert(zero_indexed, "B1")
@@ -77,8 +79,6 @@ model_seq <- function(model,
   checkmate::qassert(return_distribution, "B1")
   checkmate::qassert(return_entropy, "B1")
   stopifnot(is.null(time) || is.numeric(time))
-  
-  seq <- as.integer(seq)
   
   if (zero_indexed) {
     if (any(seq < 0L))
