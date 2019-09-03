@@ -799,9 +799,11 @@ public:
   double buffer_weight;
   bool only_learn_from_buffer;
   bool only_predict_from_buffer;
-  double stm_half_life;
   double stm_weight;
+  double stm_duration;
+  double stm_half_life; // computed from stm_weight, ltm_weight, and stm_duration
   double ltm_weight;
+  double ltm_half_life;
   double noise;
   double noise_mean; 
   
@@ -829,20 +831,38 @@ public:
     buffer_weight = decay_par["buffer_weight"];
     only_learn_from_buffer = decay_par["only_learn_from_buffer"];
     only_predict_from_buffer = decay_par["only_predict_from_buffer"];
-    stm_half_life = decay_par["stm_half_life"];
     stm_weight = decay_par["stm_weight"];
+    stm_duration = decay_par["stm_duration"];
     ltm_weight = decay_par["ltm_weight"];
+    ltm_half_life = decay_par["ltm_half_life"];
     noise = decay_par["noise"];
+    
+    stm_half_life = (log(2.0) * stm_duration) / (log(stm_weight / ltm_weight));
     
     // if (noise < 0.0) {
     //   stop("noise must be greater than or equal to zero");
     // }
     
+    if (ltm_weight > stm_weight)
+      stop("ltm_weight cannot be greater than stm_weight");
+    
+    if (ltm_weight <= 0.0)
+      stop("ltm_weight must be positive");
+    
+    if (stm_weight <= 0.0)
+      stop("stm_weight must be positive");
+    
+    if (stm_duration < 0)
+      stop("stm_duration cannot be negative");
+      
+    if (ltm_half_life <= 0)
+      stop("ltm_half_life must be positive");
+    
     if (escape != "a") 
       stop("escape method must be 'a' for decay-based models");
     
     if (only_learn_from_buffer && buffer_length_items - 1 < order_bound) 
-      stop("if only_learn_from_buffer is TRUE, order bound cannot be greater than buffer_length_items - 1");;
+      stop("if only_learn_from_buffer is TRUE, order bound cannot be greater than buffer_length_items - 1");
     
     noise_mean = noise * sqrt(2.0 / M_PI); // mean of abs(normal distribution)
     
@@ -990,7 +1010,7 @@ public:
         weight += this->buffer_weight;
       } else {
         // Rcout << "buffer failed\n";
-        weight += this->decay_exp(time_since_buffer_fail);
+        weight += this->decay_stm_ltm(time_since_buffer_fail);
       }
     }
     
@@ -1000,16 +1020,26 @@ public:
     weight += noise;
     // return std::max(0.0, weight);
     return weight;
-  };
+  }; 
   
-  double decay_exp(double elapsed_time) {
-    double lambda = log(2.0) / this->stm_half_life;
-    return 
-      this->ltm_weight + 
-        (this->stm_weight - this->ltm_weight) * 
-        exp(- lambda * elapsed_time);
+  double decay_stm_ltm(double elapsed_time) {
+    bool stm = elapsed_time < this->stm_duration;
+    if (stm) {
+      return decay_exp(this->stm_weight, 
+                       elapsed_time, 
+                       this->stm_half_life);
+    } else {
+      return decay_exp(this->ltm_weight,
+                       elapsed_time - this->stm_duration,
+                       this->ltm_half_life);
+    }
   }
   
+  double decay_exp(double start, double elapsed_time, double half_life) {
+    if (half_life <= 0.0) stop("half life must be positive");
+    return start * std::pow(2.0, - elapsed_time / half_life);
+  }
+
   double get_lambda(const std::vector<double> &counts, double context_count) {
     double total_expected_noise = this->noise_mean * this->alphabet_size;
     double adj_context_count = std::max(context_count - total_expected_noise,

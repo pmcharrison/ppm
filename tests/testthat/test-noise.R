@@ -1,7 +1,9 @@
 context("test-noise")
 
 test_that("misc", {
-  x <- new_ppm_decay(20, noise = 0.1, buffer_weight = 1, stm_weight = 1, ltm_weight = 1)
+  x <- new_ppm_decay(20, 
+                     noise = 0.1,
+                     ltm_half_life = 1e60)
   model_seq(x, 0:2, time = 0:2, predict = FALSE, zero_indexed = TRUE)
   
   y <- vapply(1:1e5, function(i) {

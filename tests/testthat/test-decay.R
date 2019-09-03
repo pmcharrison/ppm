@@ -68,7 +68,8 @@ test_that("simple tests", {
     buffer_length_items = 4,  # <---- buffer of length 4
     buffer_length_time = 100, 
     buffer_weight = 1,
-    stm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1e-30,
     noise = 0
   ) %>% `$`(distribution) 
   

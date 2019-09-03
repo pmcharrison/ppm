@@ -160,38 +160,41 @@ new_ppm_simple <- function(
 new_ppm_decay <- function(
   alphabet_size,
   order_bound = 10L,
-  buffer_length_time = 2.0,
-  buffer_length_items = 13L,
-  buffer_weight = 0.77,
-  only_learn_from_buffer = TRUE,
-  only_predict_from_buffer = TRUE,
-  stm_half_life = 2.0,
-  stm_weight = 0.53,
-  ltm_weight = 0,
-  noise = 0.5
+  ltm_weight = 1,
+  ltm_half_life = 10,
+  noise = 0,
+  stm_weight = 1,
+  stm_duration = 0,
+  buffer_weight = 1,
+  buffer_length_time = 0,
+  buffer_length_items = 0L,
+  only_learn_from_buffer = FALSE,
+  only_predict_from_buffer = FALSE
 ) {
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
+  checkmate::qassert(ltm_weight, "N1[0,)")
+  checkmate::qassert(ltm_half_life, "N1(0,)")
+  checkmate::qassert(noise, "N1[0,)")
+  checkmate::qassert(stm_weight, "N1[0,)")
+  checkmate::qassert(stm_duration, "N1[0,)")
   checkmate::qassert(buffer_length_time, "N1[0,)")
   checkmate::qassert(buffer_length_items, "X1[0,)")
   checkmate::qassert(buffer_weight, "N1[0,)")
   checkmate::qassert(only_learn_from_buffer, "B1")
   checkmate::qassert(only_predict_from_buffer, "B1")
-  checkmate::qassert(stm_half_life, "N1(0,)")
-  checkmate::qassert(stm_weight, "N1[0,)")
-  checkmate::qassert(ltm_weight, "N1[0,)")
-  checkmate::qassert(noise, "N1[0,)")
   
   decay_par = list(
+    ltm_weight = as.numeric(ltm_weight),
+    ltm_half_life = as.numeric(ltm_half_life),
+    noise = as.numeric(noise),
+    stm_weight = as.numeric(stm_weight),
+    stm_duration = as.numeric(stm_duration),
+    buffer_weight = as.numeric(buffer_weight),
     buffer_length_time = as.numeric(buffer_length_time),
     buffer_length_items = as.integer(buffer_length_items),
-    buffer_weight = as.numeric(buffer_weight),
     only_learn_from_buffer = as.logical(only_learn_from_buffer),
-    only_predict_from_buffer = as.logical(only_predict_from_buffer),
-    stm_half_life = as.numeric(stm_half_life),
-    stm_weight = as.numeric(stm_weight),
-    ltm_weight = as.numeric(ltm_weight),
-    noise = as.numeric(noise)
+    only_predict_from_buffer = as.logical(only_predict_from_buffer)
   )
   
   new(
