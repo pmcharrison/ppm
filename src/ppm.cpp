@@ -806,6 +806,7 @@ public:
   double ltm_half_life;
   double noise;
   double noise_mean; 
+  int seed;
   
   std::mt19937 random_engine;
   std::normal_distribution<> noise_generator;
@@ -815,7 +816,8 @@ public:
   ppm_decay(
     int alphabet_size_,
     int order_bound_,
-    List decay_par
+    List decay_par,
+    int seed
   ) : ppm (
       alphabet_size_,
       order_bound_,
@@ -866,8 +868,8 @@ public:
     
     noise_mean = noise * sqrt(2.0 / M_PI); // mean of abs(normal distribution)
     
-    std::random_device rd;
-    std::mt19937 engine(rd());
+    // std::random_device rd;
+    std::mt19937 engine(seed);
     std::normal_distribution<> gen{0.0, noise};
     // std::bernoulli_distribution gen_bernoulli(noise);
     // std::uniform_int_distribution<int> gen_uniform_int(0, this->alphabet_size - 1);
@@ -1142,7 +1144,7 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     class_<ppm_decay>("ppm_decay")
       .derives<ppm>("ppm")
-      .constructor<int, int, List>()
+      .constructor<int, int, List, int>()
       .method("get", &ppm_decay::get)
       .method("as_tibble", &ppm_decay::as_tibble)
       .method("as_list", &ppm_decay::as_list)
@@ -1151,11 +1153,14 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("buffer_weight", &ppm_decay::buffer_weight)
       .field("only_learn_from_buffer", &ppm_decay::only_learn_from_buffer)
       .field("only_predict_from_buffer", &ppm_decay::only_predict_from_buffer)
-      .field("stm_half_life", &ppm_decay::stm_half_life)
       .field("stm_weight", &ppm_decay::stm_weight)
+      .field("stm_duration", &ppm_decay::stm_duration)
+      .field("stm_half_life", &ppm_decay::stm_half_life)
       .field("ltm_weight", &ppm_decay::ltm_weight)
+      .field("ltm_half_life", &ppm_decay::ltm_half_life)
       .field("noise", &ppm_decay::noise)
       .field("noise_mean", &ppm_decay::noise_mean)
+      .field("seed", &ppm_decay::seed)
     ;
     
     class_<record_decay>("record_decay")

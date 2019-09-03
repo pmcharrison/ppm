@@ -169,7 +169,8 @@ new_ppm_decay <- function(
   buffer_length_time = 0,
   buffer_length_items = 0L,
   only_learn_from_buffer = FALSE,
-  only_predict_from_buffer = FALSE
+  only_predict_from_buffer = FALSE,
+  seed = sample.int(.Machine$integer.max, 1)
 ) {
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
@@ -201,7 +202,8 @@ new_ppm_decay <- function(
     ppm_decay, 
     alphabet_size = as.integer(alphabet_size),
     order_bound = as.integer(order_bound),
-    decay_par = decay_par
+    decay_par = decay_par,
+    seed = as.integer(seed)
   )
 }
 
