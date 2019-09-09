@@ -92,9 +92,9 @@ get_bigram_probabilities <- function(mod, unigram, zero_indexed) {
     dplyr::group_by(.data$elt_1) %>% 
     dplyr::mutate(probability = .data$weight / sum(.data$weight)) %>% 
     dplyr::ungroup() %>% 
-    dplyr::left_join(tibble::tibble(elt_1 = unigram$elt_1,
+    dplyr::left_join(tibble::tibble(elt_2 = unigram$elt_1,
                                     unigram_probability = unigram$probability),
-                     by = "elt_1") %>% 
+                     by = "elt_2") %>% 
     dplyr::mutate(relative_probability = .data$probability - .data$unigram_probability)
 }
 
