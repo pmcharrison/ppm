@@ -98,10 +98,11 @@ get_bigram_probabilities <- function(mod, unigram, zero_indexed) {
     dplyr::mutate(relative_probability = .data$probability - .data$unigram_probability)
 }
 
-plot_bigrams <- function(x, fill_scale) {
+plot_bigrams <- function(x, fill_scale, relative = TRUE) {
   alphabet <- sort(unique(x$elt_1))
   ggplot2::ggplot(x, ggplot2::aes_string(
-    x = "elt_1", y = "elt_2", fill = "relative_probability")) +
+    x = "elt_2", y = "elt_1",
+    fill = if (relative) "relative_probability" else "probability")) +
     ggplot2::geom_tile(colour = "black", size = 0.5) +
     ggplot2::scale_x_continuous(breaks = alphabet,
                                 minor_breaks = NULL,
@@ -119,7 +120,8 @@ plot_bigrams <- function(x, fill_scale) {
                                                     ticks.colour = "black",
                                                     ticks.linewidth = 1,
                                                     frame.colour = "black",
-                                                    frame.linewidth = 1)) 
+                                                    frame.linewidth = 1,
+                                                    barwidth = 10)) 
 }
 
 plot_unigrams <- function(x) {
