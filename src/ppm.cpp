@@ -804,6 +804,7 @@ public:
   double stm_half_life; // computed from stm_weight, ltm_weight, and stm_duration
   double ltm_weight;
   double ltm_half_life;
+  double ltm_asymptote;
   double noise;
   double noise_mean; 
   int seed;
@@ -837,6 +838,7 @@ public:
     stm_duration = decay_par["stm_duration"];
     ltm_weight = decay_par["ltm_weight"];
     ltm_half_life = decay_par["ltm_half_life"];
+    ltm_asymptote = decay_par["ltm_asymptote"];
     noise = decay_par["noise"];
     
     stm_half_life = (log(2.0) * stm_duration) / (log(stm_weight / ltm_weight));
@@ -859,6 +861,12 @@ public:
       
     if (ltm_half_life <= 0)
       stop("ltm_half_life must be positive");
+    
+    if (ltm_asymptote < 0)
+      stop("ltm_asymptote must be non-negative");
+    
+    if (ltm_asymptote > ltm_weight)
+      stop("ltm_asymptote cannot be greater than ltm_weight");
     
     if (escape != "a") 
       stop("escape method must be 'a' for decay-based models");
@@ -953,9 +961,6 @@ public:
                     bool update_excluded) {
     record_decay data = this->get(n_gram);
     
-    // if (data.pos.size() != data.time.size()) {
-    //   stop("data.pos and data.time must have identical sizes");
-    // }
     int N = static_cast<int>(this->all_time.size());
     int n = static_cast<int>(data.pos.size());
     
@@ -1029,17 +1034,23 @@ public:
     if (stm) {
       return decay_exp(this->stm_weight, 
                        elapsed_time, 
-                       this->stm_half_life);
+                       this->stm_half_life,
+                       0.0);
     } else {
       return decay_exp(this->ltm_weight,
                        elapsed_time - this->stm_duration,
-                       this->ltm_half_life);
+                       this->ltm_half_life,
+                       this->ltm_asymptote);
     }
   }
   
-  double decay_exp(double start, double elapsed_time, double half_life) {
+  double decay_exp(double start, 
+                   double elapsed_time,
+                   double half_life,
+                   double asymptote) {
     if (half_life <= 0.0) stop("half life must be positive");
-    return start * std::pow(2.0, - elapsed_time / half_life);
+    return 
+      asymptote + (start - asymptote) * std::pow(2.0, - elapsed_time / half_life);
   }
 
   double get_lambda(const std::vector<double> &counts, double context_count) {
@@ -1158,6 +1169,7 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("stm_half_life", &ppm_decay::stm_half_life)
       .field("ltm_weight", &ppm_decay::ltm_weight)
       .field("ltm_half_life", &ppm_decay::ltm_half_life)
+      .field("ltm_asymptote", &ppm_decay::ltm_asymptote)
       .field("noise", &ppm_decay::noise)
       .field("noise_mean", &ppm_decay::noise_mean)
       .field("seed", &ppm_decay::seed)

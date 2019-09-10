@@ -131,19 +131,11 @@ new_ppm_simple <- function(
 #' Specifically, for a context to be used for prediction,
 #' the first symbol within that context must still be within the buffer
 #' at the point immediately before the predicted event occurs.
-#' 
-#' @param stm_half_life
-#' (Numeric scalar)
-#' Half life of the exponential-decay phase.
-#' 
+#'  
 #' @param stm_weight
 #' (Numeric scalar)
 #' The weight of n-grams immediately after leaving the buffer.
-#' 
-#' @param ltm_weight
-#' (Numeric scalar)
-#' The weight of n-grams as time approaches infinity.
-#' 
+
 #' @param noise
 #' (Numeric scalar)
 #' Scale parameter for the retrieval noise distribution.
@@ -162,6 +154,7 @@ new_ppm_decay <- function(
   order_bound = 10L,
   ltm_weight = 1,
   ltm_half_life = 10,
+  ltm_asymptote = 0,
   noise = 0,
   stm_weight = 1,
   stm_duration = 0,
@@ -176,6 +169,7 @@ new_ppm_decay <- function(
   checkmate::qassert(order_bound, "X[0,)")
   checkmate::qassert(ltm_weight, "N1[0,)")
   checkmate::qassert(ltm_half_life, "N1(0,)")
+  checkmate::qassert(ltm_asymptote, "N1[0,)")
   checkmate::qassert(noise, "N1[0,)")
   checkmate::qassert(stm_weight, "N1[0,)")
   checkmate::qassert(stm_duration, "N1[0,)")
@@ -188,6 +182,7 @@ new_ppm_decay <- function(
   decay_par = list(
     ltm_weight = as.numeric(ltm_weight),
     ltm_half_life = as.numeric(ltm_half_life),
+    ltm_asymptote = as.numeric(ltm_asymptote),
     noise = as.numeric(noise),
     stm_weight = as.numeric(stm_weight),
     stm_duration = as.numeric(stm_duration),
