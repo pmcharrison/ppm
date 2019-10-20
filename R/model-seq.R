@@ -94,6 +94,8 @@ model_seq <- function(model,
            " (", model$alphabet_size, ")")
   }
   
+  if (any(diff(time) < 0)) stop("decreasing values of time are not permitted")
+  
   if (is_ppm_decay(model) && (length(seq) != length(time)))
     stop("for 'ppm_decay' models, ", 
          "'time' must be provided as a numeric vector ",

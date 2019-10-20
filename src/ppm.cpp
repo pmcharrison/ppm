@@ -261,6 +261,7 @@ public:
   std::string escape;
   double k;
   bool decay;
+  bool debug;
   
   int num_observations = 0;
   std::vector<double> all_time;
@@ -285,6 +286,7 @@ public:
     escape = escape_;
     k = this->get_k(escape);
     decay = decay_;
+    debug = false;
   }
   
   virtual ~ ppm() {};
@@ -325,6 +327,10 @@ public:
         static_cast<unsigned int>(time.size()))) {
       stop("time must either have length 0 or have length equal to x");
     }
+    if (this->all_time.size() > 0 && time.size() > 0 && time[0] < this->all_time.back()) {
+      stop("a sequence may not begin before the previous sequence finished");
+    }
+    
     sequence_prediction result(return_distribution,
                                return_entropy,
                                this->decay);
@@ -423,21 +429,24 @@ public:
       
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
       
-      // Rcout << "pos = " << pos << "\n";
-      // Rcout << "model_order.chosen = " << model_order.chosen << "\n";
-      // Rcout << "this->shortest_deterministic = " << this->shortest_deterministic << "\n";
-      // Rcout << "this->update_exclusion = " << this->update_exclusion << "\n";
-      // Rcout << "model_order.deterministic_is_selected = " << model_order.deterministic_is_selected << "\n";
-      // Rcout << "context = ";
-      // print(last_n(context, order));
-      // Rcout << "update_excluded = " << update_excluded << "\n";
-      // Rcout << "counts = ";
-      // print(counts);
-      // Rcout << "context_count = " << context_count << "\n";
-      // Rcout << "order = " << order << ", lambda = " << lambda << "\n";
-      // Rcout << "alphas = ";
-      // print(alphas);
-      // Rcout << "\n";
+      if (this->debug) {
+        Rcout << "pos = " << pos << "\n";
+        Rcout << "time = " << time << "\n";
+        Rcout << "model_order.chosen = " << model_order.chosen << "\n";
+        // Rcout << "this->shortest_deterministic = " << this->shortest_deterministic << "\n";
+        // Rcout << "this->update_exclusion = " << this->update_exclusion << "\n";
+        // Rcout << "model_order.deterministic_is_selected = " << model_order.deterministic_is_selected << "\n";
+        Rcout << "context = ";
+        print(last_n(context, order));
+        // Rcout << "update_excluded = " << update_excluded << "\n";
+        Rcout << "counts = ";
+        print(counts);
+        Rcout << "context_count = " << context_count << "\n";
+        Rcout << "order = " << order << ", lambda = " << lambda << "\n";
+        Rcout << "alphas = ";
+        print(alphas);
+        Rcout << "\n";
+      }
       
       if (this->exclusion) {
         for (int i = 0; i < alphabet_size; i ++) {
@@ -806,7 +815,8 @@ public:
   double ltm_half_life;
   double ltm_asymptote;
   double noise;
-  double noise_mean; 
+  double noise_mean;
+  bool disable_noise;
   int seed;
   
   std::mt19937 random_engine;
@@ -840,6 +850,7 @@ public:
     ltm_half_life = decay_par["ltm_half_life"];
     ltm_asymptote = decay_par["ltm_asymptote"];
     noise = decay_par["noise"];
+    disable_noise = false;
     
     stm_half_life = (log(2.0) * stm_duration) / (log(stm_weight / ltm_weight));
     
@@ -966,25 +977,35 @@ public:
     
     double weight = 0.0;
     for (int i = 0; i < n; i ++) {
-      // Rcout << "i = " << i << ": \n";
+      if (this->debug) {
+        Rcout << "\n\nobserving from pos = " << pos << ", time = " << time << "\n";
+        Rcout << "memory " << i << "/" << n << "\n";
+      }
+      
       if (data.pos[i] > pos) {
         stop("tried to predict using training data from the future");
       }
       if (data.pos[i] < 0) {
         stop("data.pos cannot be less than 0");
       }
+      
       // Original buffer version
       // int pos_item_buffer_fails = data.pos[i] + this->buffer_length_items;
       // double temporal_buffer_fail_time = data.time[i] + this->buffer_length_time;
       
       int pos_item_buffer_fails = data.pos[i] + 
         std::max(0, this->buffer_length_items - static_cast<int>(n_gram.size()) + 1);
-      bool item_buffer_failed = pos_item_buffer_fails <= N - 1;
+      if (this->debug) Rcout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
       
+      // Rcout << "pos = " << pos << ", N = " << N << "\n";
+      
+      bool item_buffer_failed = pos_item_buffer_fails <= N - 1; // <= pos;
+      if (this->debug) Rcout << "item_buffer_failed = " << item_buffer_failed << "\n";
       int pos_n_gram_began = data.pos[i] - static_cast<int>(n_gram.size()) + 1;
       
       double temporal_buffer_fail_time = 
         this->all_time.at(pos_n_gram_began) + this->buffer_length_time;
+      if (this->debug) Rcout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
       
       double buffer_fail_time; 
       
@@ -993,7 +1014,7 @@ public:
       
       if (item_buffer_failed) {
         double time_when_item_buffer_failed = this->all_time.at(pos_item_buffer_fails);
-        // Rcout << "time_when_item_buffer_failed = " << time_when_item_buffer_failed << "\n";
+        if (this->debug) Rcout << "time_when_item_buffer_failed = " << time_when_item_buffer_failed << "\n";
         buffer_fail_time = std::min(time_when_item_buffer_failed,
                                     temporal_buffer_fail_time);
       } else {
@@ -1002,46 +1023,57 @@ public:
       
       double time_since_buffer_fail = time - buffer_fail_time;
       
-      // Rcout << "\n\npos = " << pos << "\n"; 
-      // Rcout << "time = " << time << "\n";
-      // Rcout << "N = " << N << "\n";
-      // Rcout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
-      // Rcout << "this->buffer_length_items = " << this->buffer_length_items << "\n";
-      // Rcout << "item_buffer_failed = " << item_buffer_failed << "\n";
-      // Rcout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
-      // Rcout << "buffer_fail_time = " << buffer_fail_time << "\n";
-      // Rcout << "time_since_buffer_fail = " << time_since_buffer_fail << "\n";
+      if (this->debug) {
+        Rcout << "buffer_fail_time = " << buffer_fail_time << "\n";
+        Rcout << "time_since_buffer_fail = " << time_since_buffer_fail << "\n";
+      }
+      
+      double weight_increment;
       
       if (time_since_buffer_fail < 0) {
-        // Rcout << "buffer didn't fail\n";
-        weight += this->buffer_weight;
+        if (this->debug) Rcout << "buffer didn't fail\n";
+        weight_increment = this->buffer_weight;
       } else {
-        // Rcout << "buffer failed\n";
-        weight += this->decay_stm_ltm(time_since_buffer_fail);
+        if (this->debug) Rcout << "buffer failed\n";
+        weight_increment = this->decay_stm_ltm(time_since_buffer_fail);
       }
+      
+      if (this->debug) Rcout << "weight_increment = " << weight_increment << "\n";
+      
+      weight += weight_increment;
     }
     
-    // Rcout << "original weight = " << noise << "\n";
-    double noise = fabs(this->noise_generator(this->random_engine));
-    // Rcout << "noise = " << noise << "\n\n";
-    weight += noise;
-    // return std::max(0.0, weight);
+    if (!this->disable_noise) {
+      // Rcout << "original weight = " << noise << "\n";
+      double noise = fabs(this->noise_generator(this->random_engine));
+      // Rcout << "noise = " << noise << "\n\n";
+      weight += noise;
+      // return std::max(0.0, weight);
+    }
+    
+    if (this->debug) {
+      Rcout << "\ntotal weight = " << weight << "\n";
+    }
+    
     return weight;
   }; 
   
   double decay_stm_ltm(double elapsed_time) {
     bool stm = elapsed_time < this->stm_duration;
+    double res;
     if (stm) {
-      return decay_exp(this->stm_weight, 
+      res =  decay_exp(this->stm_weight, 
                        elapsed_time, 
                        this->stm_half_life,
                        0.0);
     } else {
-      return decay_exp(this->ltm_weight,
+      res =  decay_exp(this->ltm_weight,
                        elapsed_time - this->stm_duration,
                        this->ltm_half_life,
                        this->ltm_asymptote);
     }
+    // if (this->debug) Rcout << "elapsed_time = " << elapsed_time << ", fraction = " << res << "\n";
+    return res;
   }
   
   double decay_exp(double start, 
@@ -1054,7 +1086,12 @@ public:
   }
 
   double get_lambda(const std::vector<double> &counts, double context_count) {
-    double total_expected_noise = this->noise_mean * this->alphabet_size;
+    double total_expected_noise;
+    if (this->disable_noise) {
+      total_expected_noise = 0.0;
+    } else {
+      total_expected_noise = this->noise_mean * this->alphabet_size;
+    }
     double adj_context_count = std::max(context_count - total_expected_noise,
                                         0.0);
     
@@ -1141,6 +1178,8 @@ RCPP_EXPOSED_CLASS(record_decay)
          .field("exclusion", &ppm::exclusion)
          .field("update_exclusion", &ppm::update_exclusion)
          .field("escape", &ppm::escape)
+         .field("all_time", &ppm::all_time)
+         .field("debug", &ppm::debug)
          .method("model_seq", &ppm::model_seq)
       // .method("insert", &ppm::insert)
          .method("get_weight", &ppm::get_weight)
@@ -1172,6 +1211,7 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("ltm_asymptote", &ppm_decay::ltm_asymptote)
       .field("noise", &ppm_decay::noise)
       .field("noise_mean", &ppm_decay::noise_mean)
+      .field("disable_noise", &ppm_decay::disable_noise)
       .field("seed", &ppm_decay::seed)
     ;
     

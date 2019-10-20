@@ -26,7 +26,7 @@ RoxygenNote: 6.1.1
 Encoding: UTF-8
 SystemRequirements: C++11
 Suggests: 
-    testthat (>= 2.0.1),
+    testthat (>= 2.1.0),
     covr,
     dplyr,
     ggplot2,
