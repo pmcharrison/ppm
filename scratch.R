@@ -26,6 +26,7 @@ plot_mod <- function(...) {
 }
 
 plot_mod()
-plot_mod(stm_duration = 25,
-         ltm_weight = 0.5,
-         ltm_half_life = 50)
+plot_mod(stm_duration = 0,
+         ltm_weight = 0.25,
+         ltm_half_life = 10,
+         ltm_asymptote = 0.05)
