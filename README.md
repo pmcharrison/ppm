@@ -3,21 +3,19 @@
 
 # ppm
 
-<!-- [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental) -->
-
-<!-- [![Travis build status](https://travis-ci.org/pmcharrison/ppm.svg?branch=master)](https://travis-ci.org/pmcharrison/ppm) -->
-
-<!-- [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/pmcharrison/ppm?branch=master&svg=true)](https://ci.appveyor.com/project/pmcharrison/ppm) -->
-
-<!-- [![Coverage status](https://coveralls.io/repos/github/pmcharrison/ppm/badge.svg)](https://coveralls.io/r/pmcharrison/ppm?branch=master) -->
-
-<!-- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2620414.svg)](https://doi.org/10.5281/zenodo.2620414) -->
+[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
+[![Travis build
+status](https://travis-ci.org/pmcharrison/ppm.svg?branch=master)](https://travis-ci.org/pmcharrison/ppm)
+[![AppVeyor build
+status](https://ci.appveyor.com/api/projects/status/github/pmcharrison/ppm?branch=master&svg=true)](https://ci.appveyor.com/project/pmcharrison/ppm)
+[![Coverage
+status](https://coveralls.io/repos/github/pmcharrison/ppm/badge.svg)](https://coveralls.io/r/pmcharrison/ppm?branch=master)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2620414.svg)](https://doi.org/10.5281/zenodo.2620414)
 
 The `ppm` package implements variants of the Prediction by Partial
 Matching (PPM) algorithm as originally introduced by Cleary and Witten
 (1984), subsequently developed by Bunton (1996), and reviewed by Pearce
 (2005).
-It is intended for use within R, but the core is written in C++ for speed.
 
 ## Installation
 
