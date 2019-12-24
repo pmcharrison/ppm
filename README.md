@@ -17,6 +17,7 @@ The `ppm` package implements variants of the Prediction by Partial
 Matching (PPM) algorithm as originally introduced by Cleary and Witten
 (1984), subsequently developed by Bunton (1996), and reviewed by Pearce
 (2005).
+It is intended for use within R, but the core is written in C++ for speed.
 
 ## Installation
 
