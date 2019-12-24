@@ -4,6 +4,7 @@ library(ppm)
 
 plot_mod <- function(...) {
   mod <- new_ppm_decay(alphabet_size = 5, ...)
+  
   model_seq(mod,
             seq = 1,
             time = 0, 
