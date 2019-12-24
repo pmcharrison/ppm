@@ -163,18 +163,24 @@ time and number of events observed since the original event.
 For example, a decay kernel for modelling auditory prediction might 
 resemble the following:
 
-```{r, out.width = "50%", fig.align = 'center'}
-knitr::include_graphics("inst/example-decay-kernel.png")
+```{r, out.width = "50%", fig.align = 'center', echo = FALSE}
+knitr::include_graphics("man/figures/example-decay-kernel.png")
 ```
 
-This decay kernel begins with a buffer period,
-within which the observation is represented with maximum fidelity;
-after leaving the buffer,
-the observation's weight immediately drops by a large amount,
-and thereafter exponentially decays to a long-term asymptote.
-More details are available in the working paper
-"Modeling memory constraints in auditory pattern detection with PPM-Decay",
-by Peter Harrison, Roberta Bianco, Maria Chait, and Marcus Pearce (2019).
+In its most general form (illustrated above), 
+the decay kernel comprises three phases:
+
+- A buffer phase (yellow);
+- A short-term memory phase (red);
+- A long-term memory phase (blue).
+
+The parameters for these different phases, in particular durations
+and relative weights, are customisable.
+Each phase can be disabled separately to produce
+simpler families of decay kernels.
+For example, the default parameters define a one-stage exponential decay kernel;
+adding a buffer phase and retrieval noise produces the two-stage decay kernel
+in @Harrison2019.
 
 The `new_ppm_decay` function is used to create a new PPM-Decay model.
 It works in a similar way to `new_ppm_simple`, described above for PPM models.

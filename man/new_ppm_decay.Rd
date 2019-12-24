@@ -18,33 +18,52 @@ The size of the alphabet from which sequences are drawn.}
 \item{order_bound}{(Integerish scalar)
 The model's Markov order bound.}
 
+\item{ltm_weight}{(Numeric scalar)
+\eqn{w_2}, initial weight in the long-term memory phase.}
+
+\item{ltm_half_life}{(Numeric scalar)
+\eqn{t_2}, half life of the long-term memory phase.
+Must be greater than zero.}
+
+\item{ltm_asymptote}{(Numeric scalar)
+\eqn{w_\infty}, asymptotic weight as time tends to infinity.}
+
 \item{noise}{(Numeric scalar)
-Scale parameter for the retrieval noise distribution.}
+\eqn{\sigma_\epsilon}, scale parameter for the retrieval noise distribution.}
 
 \item{stm_weight}{(Numeric scalar)
-The weight of n-grams immediately after leaving the buffer.}
+\eqn{w_1}, initial weight in the short-term memory phase.}
+
+\item{stm_duration}{(Numeric scalar)
+\eqn{t_1}, temporal duration of the short-term memory phase, in seconds.}
 
 \item{buffer_weight}{(Numeric scalar)
-The weight of n-grams within the buffer.}
+\eqn{w_0}, weight during the buffer phase.}
 
 \item{buffer_length_time}{(Numeric scalar)
-The model's temporal buffer capacity.}
+\eqn{n_b}, the model's temporal buffer capacity.}
 
 \item{buffer_length_items}{(Integerish scalar)
-The model's itemwise buffer capacity.}
+\eqn{t_b}, the model's itemwise buffer capacity.}
 
 \item{only_learn_from_buffer}{(Logical scalar)
 If TRUE, then n-grams are only learned if they fit within
-the memory buffer.}
+the memory buffer. The default value is \code{FALSE}.}
 
 \item{only_predict_from_buffer}{(Logical scalar)
 If TRUE, then the context used for prediction is limited by the memory buffer.
 Specifically, for a context to be used for prediction,
 the first symbol within that context must still be within the buffer
-at the point immediately before the predicted event occurs.}
+at the point immediately before the predicted event occurs.
+The default value is \code{FALSE}.}
+
+\item{seed}{Random seed for prediction generation.
+By default this is linked with R's random seed, such that
+reproducible behaviour can be ensured as usual with the
+\code{\link{set.seed}} function.}
 }
 \value{
-A PPM-decay model object. 
+A PPM-decay model object.
 These objects have reference semantics.
 }
 \description{
@@ -55,8 +74,76 @@ Decay-based PPM models generalise the PPM algorithm to incorporate
 memory decay, where the effective counts of observed n-grams
 decrease over time to reflect processes of auditory memory.
 
-The model implements interpolated smoothing with escape method A, 
+The weight of a given n-gram over time is determined by a \emph{decay kernel}.
+This decay kernel is parametrised by the arguments
+\eqn{w_0}, \eqn{w_1}, \eqn{w_2}, \eqn{w_\infty},
+\eqn{n_b}, \eqn{t_b}, \eqn{t_1}, \eqn{t_2}, \eqn{\sigma_\epsilon}
+(see above).
+These parameters combine to define a decay kernel of the following form:
+
+\figure{example-decay-kernel.png}{options: width=450}
+
+The decay kernel has three phases:
+\itemize{
+\item Buffer (yellow);
+\item Short-term memory (red);
+\item Long-term mermory (blue).
+}
+
+While within the buffer, the n-gram has weight \eqn{w_0}.
+The buffer has limited temporal and itemwise capacity.
+In particular, an n-gram will leave the buffer once one
+of two conditions is satisfied:
+\itemize{
+\item A set amount of time, \eqn{t_b}, elapses since the first symbol in the n-gram was observed, or
+\item The buffer exceeds the number of symbols it can store, \eqn{n_b},
+and the n-gram no longer fits completely in the buffer,
+having been displaced by new symbols.
+}
+
+There are some subtleties about how this actually works in practice,
+refer to \insertCite{Harrison2019;textual}{ppm} for details.
+
+The second phase, short-term memory, begins as soon as the
+buffer phase completes. It has a fixed temporal duration
+of \eqn{t_1}. At the beginning of this phase,
+the n-gram has weight \eqn{w_1};
+during this phase, its weight decays exponentially until it reaches
+\eqn{w_2} at timepoint \eqn{t_2}.
+
+The second phase, long-term memory, begins as soon as the
+short-term memory phase completes. It has an unlimited temporal duration.
+At the beginning of this phase,
+the n-gram has weight \eqn{w_2};
+during this phase, its weight decays exponentially
+to an asymptote of \eqn{w_\infty}.
+
+The model optionally implements Gaussian noise at the weight retrieval stage.
+This Gaussian is parametrised by the standard deviation parameter
+\eqn{\sigma_\epsilon}.
+See \insertCite{Harrison2019;textual}{ppm} for details.
+
+This function supports simpler decay functions with fewer stages;
+in fact, the default parameters define a one-stage decay function,
+corresponding to a simple exponential decay with a half life of 10 s.
+To enable the buffer, \code{buffer_length_time} and \code{buffer_length_items}
+should be made non-zero, and \code{only_learn_from_buffer} and
+\code{only_predict_from_buffer} should be set to \code{TRUE}.
+Likewise, retrieval noise is enabled by setting \code{noise} to a non-zero value,
+and the short-term memory phase is enabled by setting \code{stm_duration}
+to a non-zero value.
+
+The names of the 'short-term memory' and 'long-term memory' phases
+should be considered arbitrary in this context;
+they do not necessarily correspond directly to their
+psychological namesakes, but are instead simply terms of convenience.
+
+The resulting PPM-Decay model uses interpolated smoothing with escape method A,
 and explicitly disables exclusion and update exclusion.
+See \insertCite{Harrison2019;textual}{ppm} for details.
+}
+\references{
+\insertAllCited{}
 }
 \seealso{
 \code{\link{new_ppm_simple}},

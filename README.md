@@ -179,19 +179,21 @@ example, a decay kernel for modelling auditory prediction might resemble
 the
 following:
 
-``` r
-knitr::include_graphics("inst/example-decay-kernel.png")
-```
+<img src="man/figures/example-decay-kernel.png" width="50%" style="display: block; margin: auto;" />
 
-<img src="inst/example-decay-kernel.png" width="50%" style="display: block; margin: auto;" />
+In its most general form (illustrated above), the decay kernel comprises
+three phases:
 
-This decay kernel begins with a buffer period, within which the
-observation is represented with maximum fidelity; after leaving the
-buffer, the observation’s weight immediately drops by a large amount,
-and thereafter exponentially decays to a long-term asymptote. More
-details are available in the working paper “Modeling memory constraints
-in auditory pattern detection with PPM-Decay”, by Peter Harrison,
-Roberta Bianco, Maria Chait, and Marcus Pearce (2019).
+  - A buffer phase (yellow);
+  - A short-term memory phase (red);
+  - A long-term memory phase (blue).
+
+The parameters for these different phases, in particular durations and
+relative weights, are customisable. Each phase can be disabled
+separately to produce simpler families of decay kernels. For example,
+the default parameters define a one-stage exponential decay kernel;
+adding a buffer phase and retrieval noise produces the two-stage decay
+kernel in Harrison et al. (2019).
 
 The `new_ppm_decay` function is used to create a new PPM-Decay model. It
 works in a similar way to `new_ppm_simple`, described above for PPM
@@ -250,6 +252,14 @@ Cleary, John G., and Ian H. Witten. 1984. “Data compression using
 adaptive coding and partial string matching.” *IEEE Transactions on
 Communications* 32 (4): 396–402.
 <https://doi.org/10.1109/TCOM.1984.1096090>.
+
+</div>
+
+<div id="ref-Harrison2019">
+
+Harrison, Peter M. C., Roberta Bianco, Maria Chait, and Marcus T.
+Pearce. 2019. “Modeling Memory Constraints in Auditory Pattern Detection
+with PPM-Decay.” *Working Paper*.
 
 </div>
 
