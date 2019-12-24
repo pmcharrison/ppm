@@ -5,7 +5,8 @@
 \title{Plot n-grams}
 \usage{
 plot_n_grams(mod, pos = 1L, time = 0, max_alphabet_size = 30L,
-  zero_indexed = FALSE, heights = c(0.25, 0.75))
+  zero_indexed = FALSE, heights = c(0.25, 0.75),
+  bigram_fill_scale = ggplot2::scale_fill_viridis_c("Probability (relative)"))
 }
 \arguments{
 \item{mod}{A PPM model object as produced by (for example)
@@ -33,6 +34,8 @@ otherwise, the alphabet is mapped to ascending integers beginning at 0
 
 \item{heights}{A numeric vector of length 2 specifying the relative heights of the 
 top and bottom plot panel respectively.}
+
+\item{bigram_fill_scale}{A \code{ggplot2} scale for the fill aesthetic of the bigram plot.}
 }
 \description{
 This function takes a trained PPM model and plots transition probabilities 

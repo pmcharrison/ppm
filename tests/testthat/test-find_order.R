@@ -5,7 +5,10 @@ test_that("buffer models", {
   # and with events every 1 second,
   # the maximum model order should be 2.
   new_ppm_decay(alphabet_size = 10, 
-                buffer_length_time = 2) %>% 
+                buffer_length_time = 2,
+                buffer_length_items = 15,
+                only_learn_from_buffer = TRUE,
+                only_predict_from_buffer = TRUE) %>% 
     model_seq(rep(1, times = 10),
               time = 1:10) %>% 
     `$`(model_order) %>% 
@@ -14,7 +17,10 @@ test_that("buffer models", {
   
   # Likewise for a 3-second buffer:
   new_ppm_decay(alphabet_size = 10, 
-                buffer_length_time = 3) %>% 
+                buffer_length_time = 3,
+                buffer_length_items = 15,
+                only_learn_from_buffer = TRUE,
+                only_predict_from_buffer = TRUE) %>% 
     model_seq(rep(1, times = 10),
               time = 1:10) %>% 
     `$`(model_order) %>% 
@@ -23,7 +29,10 @@ test_that("buffer models", {
   
   # A 1.9-second buffer should yield an order bound of 1.
   new_ppm_decay(alphabet_size = 10, 
-                buffer_length_time = 1.9) %>% 
+                buffer_length_time = 1.9,
+                buffer_length_items = 15,
+                only_learn_from_buffer = TRUE,
+                only_predict_from_buffer = TRUE) %>% 
     model_seq(rep(1, times = 10),
               time = 1:10) %>% 
     `$`(model_order) %>% 
@@ -32,7 +41,10 @@ test_that("buffer models", {
   
   # Now multiplying everything by 10:
   new_ppm_decay(alphabet_size = 10, 
-                buffer_length_time = 20) %>% 
+                buffer_length_time = 20,
+                buffer_length_items = 15,
+                only_learn_from_buffer = TRUE,
+                only_predict_from_buffer = TRUE) %>% 
     model_seq(rep(1, times = 10),
               time = seq(from = 10, to = 100, by = 10)) %>% 
     `$`(model_order) %>% 

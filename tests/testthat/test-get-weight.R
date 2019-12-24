@@ -33,9 +33,8 @@ test_that("misc", {
     buffer_length_time = 999999,
     buffer_length_items = 10,
     buffer_weight = 1,
-    stm_half_life = 0.000000001,
-    stm_weight = 1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 0.000000001,
     noise = 0) %>% expect_equal(9)
   
   # No more than 10 cases can be counted
@@ -46,12 +45,11 @@ test_that("misc", {
     buffer_length_time = 999999,
     buffer_length_items = 10,
     buffer_weight = 1,
-    stm_half_life = 0.000000001,
-    stm_weight = 1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 0.000000001,
     noise = 0) %>% expect_equal(10)
   
-  # Now set a non-zero ltm_rate
+  # Now set a non-zero ltm_weight
   f(seq = rep(1, times = 15),
     n_gram = 1,
     pos = 16, time = 16,
@@ -59,9 +57,9 @@ test_that("misc", {
     buffer_length_time = 999999,
     buffer_length_items = 10,
     buffer_weight = 1,
-    stm_half_life = 0.000000001,
-    stm_weight = 1,
+    stm_duration = 0, 
     ltm_weight = 0.1,
+    ltm_half_life = 1e60,
     noise = 0) %>% expect_equal(10 + 0.5)
   
   # Now to distinguish time from position,
@@ -75,9 +73,10 @@ test_that("misc", {
     buffer_length_time = 999999,
     buffer_length_items = 10,
     buffer_weight = 1,
-    stm_half_life = 1,
-    stm_weight = 1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_weight = 1,
+    ltm_half_life = 1,
+    # ltm_weight = 0,
     noise = 0) %>% expect_equal(10)
 
   # Past the buffer, we decay with a half-life of 1
@@ -88,9 +87,9 @@ test_that("misc", {
     buffer_length_time = 999999,
     buffer_length_items = 10,
     buffer_weight = 1,
-    stm_half_life = 1,
-    stm_weight = 1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1,
+    ltm_weight = 1,
     noise = 0) %>% expect_equal(10 + 0.5)
   
   f(seq = rep(1, times = 11),
@@ -100,9 +99,8 @@ test_that("misc", {
     buffer_length_time = 999999,
     buffer_length_items = 10,
     buffer_weight = 1,
-    stm_half_life = 1,
-    stm_weight = 1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1,
     noise = 0) %>% expect_equal(10 + 0.25)
   
   ## Time buffers
@@ -113,9 +111,8 @@ test_that("misc", {
     buffer_length_time = 7,
     buffer_length_items = 1000,
     buffer_weight = 1,
-    stm_half_life = 1,
-    stm_weight = 1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1,
     noise = 0) %>% 
     expect_equal({
       decay_exp(2, 1, 1, 0) +
@@ -139,9 +136,9 @@ test_that("misc", {
     buffer_length_time = 999999,
     buffer_length_items = 4,
     buffer_weight = 1,
-    stm_half_life = 1,
-    stm_weight = 0.1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1,
+    ltm_weight = 0.1,
     noise = 0) %>% expect_equal(1)
   
   f(seq = 1:5, # <------
@@ -151,9 +148,9 @@ test_that("misc", {
     buffer_length_time = 999999,
     buffer_length_items = 4,
     buffer_weight = 1,
-    stm_half_life = 1,
-    stm_weight = 0.1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1,
+    ltm_weight = 0.1,
     noise = 0) %>% expect_equal(0.1)
   
   # With a buffer of time length 4,
@@ -168,9 +165,9 @@ test_that("misc", {
     buffer_length_time = 4,
     buffer_length_items = 1000,
     buffer_weight = 1,
-    stm_half_life = 1,
-    stm_weight = 0.1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1,
+    ltm_weight = 0.1,
     noise = 0) %>% expect_equal(1)
   
   f(seq = 1:6,
@@ -180,9 +177,9 @@ test_that("misc", {
     buffer_length_time = 4,
     buffer_length_items = 1000,
     buffer_weight = 1,
-    stm_half_life = 1,
-    stm_weight = 0.1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1,
+    ltm_weight = 0.1,
     noise = 0) %>% expect_equal(0.1)
   
   ## Buffer rate
@@ -193,9 +190,9 @@ test_that("misc", {
     buffer_length_time = 7,
     buffer_length_items = 1000,
     buffer_weight = 0.5,
-    stm_half_life = 1,
-    stm_weight = 1,
-    ltm_weight = 0,
+    stm_duration = 0,
+    ltm_half_life = 1,
+    ltm_weight = 1,
     noise = 0) %>% 
     expect_equal({
       decay_exp(2, 1, 1, 0) +

@@ -48,13 +48,19 @@
 #' A numeric vector of length 2 specifying the relative heights of the 
 #' top and bottom plot panel respectively.
 #' 
+#' @param bigram_fill_scale 
+#' A \code{ggplot2} scale for the fill aesthetic of the bigram plot.
+#' 
 #' @export
 #' 
 #' @note 
 #' This function requires the following additional packages: dplyr, ggplot2, and egg,
 #' each of which can be installed using \code{install.packages} from CRAN.
-plot_n_grams <- function(mod, pos = 1L, time = 0, max_alphabet_size = 30L,
-                         zero_indexed = FALSE, heights = c(0.25, 0.75)) {
+plot_n_grams <- function(
+  mod, pos = 1L, time = 0, max_alphabet_size = 30L,
+  zero_indexed = FALSE, heights = c(0.25, 0.75),
+  bigram_fill_scale = ggplot2::scale_fill_viridis_c("Probability (relative)")
+) {
   if (!requireNamespace("dplyr", quietly = TRUE))
     stop("this function requires the dplyr package")
   if (!requireNamespace("ggplot2", quietly = TRUE))
@@ -71,7 +77,7 @@ plot_n_grams <- function(mod, pos = 1L, time = 0, max_alphabet_size = 30L,
   bigram_probs <- get_bigram_probabilities(mod, unigram_probs, zero_indexed = zero_indexed)
   
   egg::ggarrange(plot_unigrams(unigram_probs),
-                 plot_bigrams(bigram_probs),
+                 plot_bigrams(bigram_probs, bigram_fill_scale),
                  ncol = 1,
                  heights = heights)
 }
@@ -86,36 +92,42 @@ get_bigram_probabilities <- function(mod, unigram, zero_indexed) {
     dplyr::group_by(.data$elt_1) %>% 
     dplyr::mutate(probability = .data$weight / sum(.data$weight)) %>% 
     dplyr::ungroup() %>% 
-    dplyr::left_join(tibble::tibble(elt_1 = unigram$elt_1,
+    dplyr::left_join(tibble::tibble(elt_2 = unigram$elt_1,
                                     unigram_probability = unigram$probability),
-                     by = "elt_1") %>% 
+                     by = "elt_2") %>% 
     dplyr::mutate(relative_probability = .data$probability - .data$unigram_probability)
 }
 
-plot_bigrams <- function(x) {
+plot_bigrams <- function(x, fill_scale, relative = TRUE) {
   alphabet <- sort(unique(x$elt_1))
   ggplot2::ggplot(x, ggplot2::aes_string(
-    x = "elt_1", y = "elt_2", fill = "relative_probability")) +
-    ggplot2::geom_tile() +
+    x = "elt_2", y = "elt_1",
+    fill = if (relative) "relative_probability" else "probability")) +
+    ggplot2::geom_tile(colour = "black", size = 0.5) +
     ggplot2::scale_x_continuous(breaks = alphabet,
                                 minor_breaks = NULL,
                                 name = "Continuation") +
     ggplot2::scale_y_continuous(breaks = alphabet,
                                 minor_breaks = NULL,
                                 name = "Context") +
-    ggplot2::scale_fill_continuous(name = "Probability (relative)") +
+    fill_scale +
     ggplot2::theme(legend.position = "bottom",
-                   legend.justification = "left") +
+                   legend.justification = "centre") +
     ggplot2::guides(fill = ggplot2::guide_colourbar(title.position = "top", 
-                                                    # hjust = 0.5 centres the title horizontally
+                                                    # hjust = 0.5, # centres the title horizontally
                                                     title.hjust = 0,
-                                                    label.position = "bottom")) 
+                                                    label.position = "bottom",
+                                                    ticks.colour = "black",
+                                                    ticks.linewidth = 1,
+                                                    frame.colour = "black",
+                                                    frame.linewidth = 1,
+                                                    barwidth = 10)) 
 }
 
 plot_unigrams <- function(x) {
   alphabet <- sort(unique(x$elt_1))
   ggplot2::ggplot(x, ggplot2::aes_string(x = "elt_1", y = "probability")) +
-    ggplot2::geom_bar(stat = "identity", colour = "black", fill = "darkred") +
+    ggplot2::geom_bar(stat = "identity", colour = "black", fill = "#289b87") +
     ggplot2::scale_x_continuous(breaks = alphabet, minor_breaks = NULL, name = NULL) +
     ggplot2::scale_y_continuous("Probability")
 }
