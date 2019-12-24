@@ -81,7 +81,8 @@ This decay kernel is parametrised by the arguments
 (see above).
 These parameters combine to define a decay kernel of the following form:
 
-\figure{example-decay-kernel.png}{options: width=450}
+\if{latex}{\figure{example-decay-kernel.png}{options: width=6in}}
+\if{html}{\figure{example-decay-kernel.png}{options: width=450}}
 
 The decay kernel has three phases:
 \itemize{
