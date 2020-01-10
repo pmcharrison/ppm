@@ -43,6 +43,10 @@
 #' corresponding to the eponymous escape methods 
 #' in \insertCite{Pearce2005;textual}{ppm}.
 #' 
+#' @param debug
+#' (Logical scalar)
+#' Whether to print (currently rather messy and ad hoc) debug output.
+#' 
 #' @note
 #' The implementation does not scale well to very large order bounds (> 50).
 #' 
@@ -64,7 +68,8 @@ new_ppm_simple <- function(
   shortest_deterministic = TRUE,
   exclusion = TRUE,
   update_exclusion = TRUE,
-  escape = "c"
+  escape = "c",
+  debug = FALSE
 ) {
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
@@ -72,6 +77,7 @@ new_ppm_simple <- function(
   checkmate::qassert(exclusion, "B1")
   checkmate::qassert(update_exclusion, "B1")
   checkmate::qassert(escape, "S1")
+  checkmate::qassert(debug, "B1")
   
   valid_escape_methods <- c("a", "b", "c", "d", "ax")
   if (!escape %in% valid_escape_methods)
@@ -85,7 +91,8 @@ new_ppm_simple <- function(
     shortest_deterministic = shortest_deterministic,
     exclusion = exclusion,
     update_exclusion = update_exclusion,
-    escape = escape
+    escape = escape,
+    debug = debug
   )
 }
 
@@ -228,6 +235,10 @@ new_ppm_simple <- function(
 #' reproducible behaviour can be ensured as usual with the 
 #' \code{\link{set.seed}} function.
 #' 
+#' @param debug
+#' (Logical scalar)
+#' Whether to print (currently rather messy and ad hoc) debug output.
+#' 
 #' @return 
 #' A PPM-decay model object. 
 #' These objects have reference semantics.
@@ -256,7 +267,8 @@ new_ppm_decay <- function(
   buffer_length_items = 0L,
   only_learn_from_buffer = FALSE,
   only_predict_from_buffer = FALSE,
-  seed = sample.int(.Machine$integer.max, 1)
+  seed = sample.int(.Machine$integer.max, 1),
+  debug = FALSE
 ) {
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
@@ -271,6 +283,7 @@ new_ppm_decay <- function(
   checkmate::qassert(buffer_weight, "N1[0,)")
   checkmate::qassert(only_learn_from_buffer, "B1")
   checkmate::qassert(only_predict_from_buffer, "B1")
+  checkmate::qassert(debug, "B1")
   
   decay_par = list(
     ltm_weight = as.numeric(ltm_weight),
@@ -291,7 +304,8 @@ new_ppm_decay <- function(
     alphabet_size = as.integer(alphabet_size),
     order_bound = as.integer(order_bound),
     decay_par = decay_par,
-    seed = as.integer(seed)
+    seed = as.integer(seed),
+    debug = debug
   )
 }
 
