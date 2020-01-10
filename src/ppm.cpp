@@ -275,7 +275,7 @@ public:
   std::string escape;
   double k;
   bool decay;
-  bool subtract_num_observed_symbols_in_order_minus_one_distribution;
+  bool sub_n_from_m1_dist;
   bool debug;
   
   int num_observations = 0;
@@ -288,7 +288,7 @@ public:
       bool update_exclusion_,
       std::string escape_,
       bool decay_,
-      bool subtract_num_observed_symbols_in_order_minus_one_distribution_,
+      bool sub_n_from_m1_dist_,
       bool debug_
   ) {
     if (alphabet_size_ <= 0) {
@@ -303,8 +303,8 @@ public:
     escape = escape_;
     k = this->get_k(escape);
     decay = decay_;
-    subtract_num_observed_symbols_in_order_minus_one_distribution = 
-      subtract_num_observed_symbols_in_order_minus_one_distribution_;
+    sub_n_from_m1_dist = 
+      sub_n_from_m1_dist_;
     debug = debug_;
   }
   
@@ -659,7 +659,7 @@ public:
     
     double denominator = this->alphabet_size + 1;
     
-    if (this->subtract_num_observed_symbols_in_order_minus_one_distribution) {
+    if (this->sub_n_from_m1_dist) {
       // This is disabled for decay-based models
       double num_observed_symbols = this->get_num_observed_symbols(pos, time);
       denominator -= num_observed_symbols;
@@ -762,7 +762,7 @@ public:
       update_exclusion_, 
       escape_,
       false, // decay
-      true, // subtract_num_observed_symbols_in_order_minus_one_distribution
+      true, // sub_n_from_m1_dist
       debug // debug
       ) { 
     data = {};
@@ -933,7 +933,7 @@ public:
       false, // update_exclusion
       "a", // escape,
       true, // decay
-      false, // subtract_num_observed_symbols_in_order_minus_one_distribution
+      false, // sub_n_from_m1_dist
       debug
   ) {
     data = {};
@@ -1277,6 +1277,7 @@ RCPP_EXPOSED_CLASS(record_decay)
          .field("update_exclusion", &ppm::update_exclusion)
          .field("escape", &ppm::escape)
          .field("all_time", &ppm::all_time)
+         .field("sub_n_from_m1_dist", &ppm::sub_n_from_m1_dist)
          .field("debug", &ppm::debug)
          .method("model_seq", &ppm::model_seq)
       // .method("insert", &ppm::insert)
