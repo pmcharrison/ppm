@@ -73,6 +73,20 @@ void print(const std::vector<double> &x) {
   Rcout << "\n";
 }
 
+void print(const std::vector<bool> &x) {
+  for (unsigned int j = 0; j < x.size(); j ++) {
+    if (j > 0) {
+      Rcout << " ";
+    }
+    if (x[j]) {
+      Rcout << "True";
+    } else {
+      Rcout << "False";
+    }
+  }
+  Rcout << "\n";
+}
+
 RObject list_to_tibble(List x) {
   Environment pkg = Environment::namespace_env("tibble");
   Function f = pkg["as_tibble"];
@@ -261,6 +275,7 @@ public:
   std::string escape;
   double k;
   bool decay;
+  bool subtract_num_observed_symbols_in_order_minus_one_distribution;
   bool debug;
   
   int num_observations = 0;
@@ -272,7 +287,9 @@ public:
       bool exclusion_,
       bool update_exclusion_,
       std::string escape_,
-      bool decay_
+      bool decay_,
+      bool subtract_num_observed_symbols_in_order_minus_one_distribution_,
+      bool debug_
   ) {
     if (alphabet_size_ <= 0) {
       stop("alphabet size must be greater than 0");
@@ -286,7 +303,9 @@ public:
     escape = escape_;
     k = this->get_k(escape);
     decay = decay_;
-    debug = false;
+    subtract_num_observed_symbols_in_order_minus_one_distribution = 
+      subtract_num_observed_symbols_in_order_minus_one_distribution_;
+    debug = debug_;
   }
   
   virtual ~ ppm() {};
@@ -303,6 +322,16 @@ public:
                             bool update_excluded) {
     return 0.0;
   };
+  
+  double get_num_observed_symbols(int pos, double time) {
+    int res = 0;
+    for (int i = 0; i < this->alphabet_size; i ++) {
+      sequence symbol(1, i);
+      double weight = get_weight(symbol, pos, time, false);
+      if (weight > 0.0) res ++;
+    }
+    return res;
+  }
   
   double get_context_count(const std::vector<double> &counts, 
                            const std::vector<bool> &excluded) {
@@ -401,7 +430,7 @@ public:
                                                 double time,
                                                 std::vector<bool> &excluded) {
     if (order == -1) {
-      return get_order_minus_1_distribution(excluded);
+      return get_order_minus_1_distribution(pos, time);
     } else {
       bool update_excluded = this->update_exclusion;
       if (order == model_order.chosen &&
@@ -415,9 +444,18 @@ public:
       n_gram.resize(order + 1);
       
       std::vector<double> counts(this->alphabet_size);
+      int num_distinct_symbols = 0;
+      std::vector<bool> predicted(this->alphabet_size);
+      
       for (int i = 0; i < this->alphabet_size; i ++) {
         n_gram[order] = i;
         counts[i] = this->get_weight(n_gram, pos, time, update_excluded);
+        if (counts[i] > 0.0) {
+          predicted[i] = true;
+          num_distinct_symbols += 1;
+        } else {
+          predicted[i] = false;
+        }
         counts[i] = this->modify_count(counts[i]);
       }
       
@@ -425,7 +463,7 @@ public:
       // print(counts);
       
       double context_count = get_context_count(counts, excluded);
-      double lambda = get_lambda(counts, context_count);
+      double lambda = get_lambda(counts, context_count, num_distinct_symbols);
       
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
       
@@ -445,14 +483,35 @@ public:
         Rcout << "order = " << order << ", lambda = " << lambda << "\n";
         Rcout << "alphas = ";
         print(alphas);
-        Rcout << "\n";
       }
       
       if (this->exclusion) {
         for (int i = 0; i < alphabet_size; i ++) {
-          if (alphas[i] > 0) {
+          // There is a choice here:
+          // do we exclude symbols that have alphas greater than 0
+          // (i.e. their counts survive addition of k),
+          // or do we exclude any symbol that is present in the tree at all,
+          // even if adding k takes it down to 0?
+          //
+          // Since decay-based models don't have exclusion,
+          // we only have to think about normal PPM models.
+          // All of these models apart from PPM-B have k > -1,
+          // in which case there is no difference between the strategies.
+          // We only have to worry for PPM-B.
+          //
+          // Following Bunton (1996) and Pearce (2005)'s implementation,
+          // we adopt the latter strategy, excluding symbols even 
+          // if their alphas are equal to 0, as long as they were present
+          // in the tree.
+          
+          if (predicted[i]) {
             excluded[i] = true;
           }
+        }
+        if (this->debug) {
+          Rcout << "new excluded = ";
+          print(excluded);
+          Rcout << "\n";
         }
       }
       
@@ -462,6 +521,12 @@ public:
       std::vector<double> res(this->alphabet_size);
       for (int i = 0; i < this->alphabet_size; i ++) {
         res[i] = alphas[i] + (1 - lambda) * lower_order_distribution[i];
+      }
+      
+      if (this->debug) {
+        Rcout << "order " << order << " ";
+        Rcout << "probability distribution = ";
+        print(res);
       }
       
       return res;
@@ -487,7 +552,7 @@ public:
   // introduced by Pearce (2005)'s decision to introduce exclusion
   // (see 6.2.3.3), though the thesis does not mention
   // this explicitly.
-  virtual double get_lambda(const std::vector<double> &counts, double context_count) {
+  virtual double get_lambda(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
     return 0.0;
   }
   
@@ -507,35 +572,32 @@ public:
     }
   }
   
-  double lambda_a(const std::vector<double> &counts, double context_count) {
+  double lambda_a(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
     return static_cast<double>(context_count) /
       (static_cast<double>(context_count) + 1.0);
   }
   
-  double lambda_b(const std::vector<double> &counts, double context_count) {
-    int num_distinct_symbols = this->count_positive_values(counts);
+  double lambda_b(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
     return static_cast<double>(context_count) /
       static_cast<double>(context_count + num_distinct_symbols);
   }
   
-  double lambda_c(const std::vector<double> &counts, double context_count) {
-    int num_distinct_symbols = this->count_positive_values(counts);
+  double lambda_c(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
     return static_cast<double>(context_count) /
       static_cast<double>(context_count + num_distinct_symbols);
   }
   
-  double lambda_d(const std::vector<double> &counts, double context_count) {
-    int num_distinct_symbols = this->count_positive_values(counts);
+  double lambda_d(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
     return static_cast<double>(context_count) /
-      (static_cast<double>(context_count + num_distinct_symbols) / 2.0);
+      (static_cast<double>(context_count + num_distinct_symbols / 2.0));
   }
   
-  double lambda_ax(const std::vector<double> &counts, double context_count) {
+  double lambda_ax(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
     // We generalise the definition of singletons to decayed counts between
     // 0 and 1. This is a bit hacky though, and the escape method
     // should ultimately be reconfigured for new decay functions.
     return static_cast<double>(context_count) /
-      static_cast<double>(context_count + num_singletons(counts) + 1.0);
+      static_cast<double>(context_count + num_singletons(counts) + 1.0); // where does the 1.0 come from?
   }
   
   int num_singletons(const std::vector<double> &x) {
@@ -573,15 +635,38 @@ public:
     return res;
   }
   
-  std::vector<double> get_order_minus_1_distribution(const std::vector<bool> &excluded) {
-    int num_observed_symbols = 0;
-    for (int i = 0; i < this->alphabet_size; i ++) {
-      if (excluded[i]) {
-        num_observed_symbols ++;
-      } 
+  std::vector<double> get_order_minus_1_distribution(int pos, double time) {
+    
+    // See Bunton (1996, p. 82): alpha(s0) comes from the 3-arg version of count(),
+    // which does not include exclusion or subtraction 
+    // of the k parameter (see escape method).
+    // It instead corresponds to the number of symbols that the model 
+    // has ever seen.
+    
+    //// Old version:
+    // int num_observed_symbols = 0;
+    // for (int i = 0; i < this->alphabet_size; i ++) {
+    //   if (excluded[i]) {
+    //     num_observed_symbols ++;
+    //   } 
+    // }
+    
+    double denominator = this->alphabet_size + 1;
+    
+    if (this->subtract_num_observed_symbols_in_order_minus_one_distribution) {
+      // This is disabled for decay-based models
+      double num_observed_symbols = this->get_num_observed_symbols(pos, time);
+      denominator -= num_observed_symbols;
     }
-    double p = 1.0 / static_cast<double>(this->alphabet_size + 1 - num_observed_symbols);
+    
+    double p = 1.0 / denominator;
     std::vector<double> res(this->alphabet_size, p);
+    
+    if (this->debug) {
+      Rcout << "order minus 1 distribution = ";
+      print(res);
+      Rcout << "\n";
+    }
     return res;
   }
   
@@ -661,7 +746,8 @@ public:
     bool shortest_deterministic_,
     bool exclusion_,
     bool update_exclusion_,
-    std::string escape_
+    std::string escape_,
+    bool debug
   ) : ppm(
       alphabet_size_,
       order_bound_, 
@@ -669,7 +755,10 @@ public:
       exclusion_, 
       update_exclusion_, 
       escape_,
-      false) { // decay
+      false, // decay
+      true, // subtract_num_observed_symbols_in_order_minus_one_distribution
+      debug // debug
+      ) { 
     data = {};
   }
   
@@ -754,20 +843,20 @@ public:
   // introduced by Pearce (2005)'s decision to introduce exclusion
   // (see 6.2.3.3), though the thesis does not mention
   // this explicitly.
-  double get_lambda(const std::vector<double> &counts, double context_count) {
+  double get_lambda(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
     std::string e = this->escape;
     if (context_count <= 0) {
       return 0.0;
     } else if (e == "a") {
-      return this->lambda_a(counts, context_count);
+      return this->lambda_a(counts, context_count, num_distinct_symbols);
     } else if (e == "b") {
-      return this->lambda_b(counts, context_count);
+      return this->lambda_b(counts, context_count, num_distinct_symbols);
     } else if (e == "c") {
-      return this->lambda_c(counts, context_count);
+      return this->lambda_c(counts, context_count, num_distinct_symbols);
     } else if (e == "d") {
-      return this->lambda_d(counts, context_count);
+      return this->lambda_d(counts, context_count, num_distinct_symbols);
     } else if (e == "ax") {
-      return this->lambda_ax(counts, context_count);
+      return this->lambda_ax(counts, context_count, num_distinct_symbols);
     } else {
       stop("unrecognised escape method");
     }
@@ -828,7 +917,8 @@ public:
     int alphabet_size_,
     int order_bound_,
     List decay_par,
-    int seed
+    int seed,
+    bool debug
   ) : ppm (
       alphabet_size_,
       order_bound_,
@@ -836,7 +926,9 @@ public:
       false, // exclusion
       false, // update_exclusion
       "a", // escape,
-      true // decay
+      true, // decay
+      false, // subtract_num_observed_symbols_in_order_minus_one_distribution
+      debug
   ) {
     data = {};
     buffer_length_time = decay_par["buffer_length_time"];
@@ -1102,7 +1194,7 @@ public:
     if (context_count <= 0) {
       return 0.0;
     } else {
-      return this->lambda_a(counts, adj_context_count);
+      return this->lambda_a(counts, adj_context_count, -99); // last parameter ignored
     }
   }
   
@@ -1187,14 +1279,14 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     class_<ppm_simple>("ppm_simple")
       .derives<ppm>("ppm")
-      .constructor<int, int, bool, bool, bool, std::string>()
+      .constructor<int, int, bool, bool, bool, std::string, bool>()
       .method("get_count", &ppm_simple::get_count)
       .method("as_tibble", &ppm_simple::as_tibble)
     ;
     
     class_<ppm_decay>("ppm_decay")
       .derives<ppm>("ppm")
-      .constructor<int, int, List, int>()
+      .constructor<int, int, List, int, bool>()
       .method("get", &ppm_decay::get)
       .method("as_tibble", &ppm_decay::as_tibble)
       .method("as_list", &ppm_decay::as_list)
