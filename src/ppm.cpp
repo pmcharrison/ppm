@@ -593,11 +593,17 @@ public:
   }
   
   double lambda_ax(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
+    // Note - there is a mistake in the reference papers, 
+    // Pearce & Wiggins (2004), also Pearce (2005);
+    // the 1.0 is missing from the equation.
+    // Our version is consistent with the context literature though,
+    // and consistent with Pearce's LISP implementation.
+    //
     // We generalise the definition of singletons to decayed counts between
     // 0 and 1. This is a bit hacky though, and the escape method
     // should ultimately be reconfigured for new decay functions.
     return static_cast<double>(context_count) /
-      static_cast<double>(context_count + num_singletons(counts) + 1.0); // where does the 1.0 come from?
+      static_cast<double>(context_count + num_singletons(counts) + 1.0);
   }
   
   int num_singletons(const std::vector<double> &x) {

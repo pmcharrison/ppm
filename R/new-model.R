@@ -42,6 +42,11 @@
 #' Takes values 'a', 'b', 'c', 'd', or 'ax',
 #' corresponding to the eponymous escape methods 
 #' in \insertCite{Pearce2005;textual}{ppm}.
+#' Note that there is a mistake in the definition of escape method 
+#' "AX" in \insertCite{Pearce2005;textual}{ppm}; 
+#' the denominator of lambda needs to have 1 added.
+#' This is what we implement here. Note that Pearce's
+#' LISP implementation correctly adds 1 here, like us.
 #' 
 #' @param debug
 #' (Logical scalar)
