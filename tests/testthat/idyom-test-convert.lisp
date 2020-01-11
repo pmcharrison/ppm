@@ -1,3 +1,10 @@
+(in-package :ppm-star)
+
+(defun test-model (sequences alphabet &key (ps t) (escape :c))
+     (let ((model (ppm:make-ppm alphabet :escape escape :mixtures t
+                                :update-exclusion t :order-bound nil)))
+       (prog1 (ppm:model-dataset model sequences :construct? t :predict? t))))
+
 (defun to-R (file x)
   (with-open-file (s file :direction :output :if-exists :supersede)
     (format s "~%x <- list(~%")
@@ -25,4 +32,6 @@
 		    (format s (if (equal h N) ")" ",~%"))))
 	    (format s (if (equal g M) ")" ",~%"))))))
 
-(to-R "/Users/peter/Dropbox/Academic/projects/maria-chait/PPMdecay/tests/testthat/data/ppm-mix-1.R"
+(to-r "/home/peter/Dropbox/Academic/projects/harrison-peter/ppm/tests/testthat/data/escape-b.R" 
+      (test-model '((a b r a c a d a b r a)) '(a b c d r) :escape :b))
+

@@ -23,3 +23,11 @@ test_that("different escape methods, without update exclusion", {
   test("d", update_exclusion = FALSE, "escape-d.R")
   test("ax", update_exclusion = FALSE, "escape-ax.R")
 })
+
+test_that("different escape methods, without update exclusion", {
+  test("a", update_exclusion = TRUE, "escape-a-update-excluded.R")
+  test("b", update_exclusion = TRUE, "escape-b-update-excluded.R")
+  test("c", update_exclusion = TRUE, "escape-c-update-excluded.R")
+  test("d", update_exclusion = TRUE, "escape-d-update-excluded.R")
+  test("ax", update_exclusion = TRUE, "escape-ax-update-excluded.R")
+})
