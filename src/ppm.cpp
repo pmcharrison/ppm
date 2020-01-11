@@ -470,7 +470,7 @@ public:
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
       
       if (this->debug_smooth) {
-        Rcout << "*** order = " << order << " ***\n";
+        Rcout << "\n*** order = " << order << " ***\n";
         Rcout << "pos = " << pos << "\n";
         Rcout << "time = " << time << "\n";
         Rcout << "model_order.chosen = " << model_order.chosen << "\n";
@@ -514,7 +514,6 @@ public:
         if (this->debug_smooth) {
           Rcout << "new excluded = ";
           print(excluded);
-          Rcout << "\n";
         }
       }
       
