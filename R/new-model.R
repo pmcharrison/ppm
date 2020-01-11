@@ -48,9 +48,10 @@
 #' This is what we implement here. Note that Pearce's
 #' LISP implementation correctly adds 1 here, like us.
 #' 
-#' @param debug
+#' @param debug_smooth
 #' (Logical scalar)
-#' Whether to print (currently rather messy and ad hoc) debug output.
+#' Whether to print (currently rather messy and ad hoc) debug output
+#' for smoothing.
 #' 
 #' @note
 #' The implementation does not scale well to very large order bounds (> 50).
@@ -74,7 +75,7 @@ new_ppm_simple <- function(
   exclusion = TRUE,
   update_exclusion = TRUE,
   escape = "c",
-  debug = FALSE
+  debug_smooth = FALSE
 ) {
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
@@ -82,7 +83,7 @@ new_ppm_simple <- function(
   checkmate::qassert(exclusion, "B1")
   checkmate::qassert(update_exclusion, "B1")
   checkmate::qassert(escape, "S1")
-  checkmate::qassert(debug, "B1")
+  checkmate::qassert(debug_smooth, "B1")
   
   valid_escape_methods <- c("a", "b", "c", "d", "ax")
   if (!escape %in% valid_escape_methods)
@@ -97,7 +98,7 @@ new_ppm_simple <- function(
     exclusion = exclusion,
     update_exclusion = update_exclusion,
     escape = escape,
-    debug = debug
+    debug_smooth = debug_smooth
   )
 }
 
@@ -240,9 +241,15 @@ new_ppm_simple <- function(
 #' reproducible behaviour can be ensured as usual with the 
 #' \code{\link{set.seed}} function.
 #' 
-#' @param debug
+#' @param debug_smooth
 #' (Logical scalar)
-#' Whether to print (currently rather messy and ad hoc) debug output.
+#' Whether to print (currently rather messy and ad hoc) debug output
+#' for the smoothing mechanism.
+#' 
+#' @param debug_decay
+#' (Logical scalar)
+#' Whether to print (currently rather messy and ad hoc) debug output
+#' for the decay mechanism.
 #' 
 #' @return 
 #' A PPM-decay model object. 
@@ -273,7 +280,8 @@ new_ppm_decay <- function(
   only_learn_from_buffer = FALSE,
   only_predict_from_buffer = FALSE,
   seed = sample.int(.Machine$integer.max, 1),
-  debug = FALSE
+  debug_smooth = FALSE,
+  debug_decay = FALSE
 ) {
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
@@ -288,7 +296,8 @@ new_ppm_decay <- function(
   checkmate::qassert(buffer_weight, "N1[0,)")
   checkmate::qassert(only_learn_from_buffer, "B1")
   checkmate::qassert(only_predict_from_buffer, "B1")
-  checkmate::qassert(debug, "B1")
+  checkmate::qassert(debug_smooth, "B1")
+  checkmate::qassert(debug_decay, "B1")
   
   decay_par = list(
     ltm_weight = as.numeric(ltm_weight),
@@ -310,7 +319,8 @@ new_ppm_decay <- function(
     order_bound = as.integer(order_bound),
     decay_par = decay_par,
     seed = as.integer(seed),
-    debug = debug
+    debug_smooth = debug_smooth,
+    debug_decay = debug_decay
   )
 }
 

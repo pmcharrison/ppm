@@ -276,7 +276,8 @@ public:
   double k;
   bool decay;
   bool sub_n_from_m1_dist;
-  bool debug;
+  bool lambda_uses_zero_weight_symbols;
+  bool debug_smooth;
   
   int num_observations = 0;
   std::vector<double> all_time;
@@ -289,7 +290,8 @@ public:
       std::string escape_,
       bool decay_,
       bool sub_n_from_m1_dist_,
-      bool debug_
+      bool lambda_uses_zero_weight_symbols_,
+      bool debug_smooth_
   ) {
     if (alphabet_size_ <= 0) {
       stop("alphabet size must be greater than 0");
@@ -303,9 +305,9 @@ public:
     escape = escape_;
     k = this->get_k(escape);
     decay = decay_;
-    sub_n_from_m1_dist = 
-      sub_n_from_m1_dist_;
-    debug = debug_;
+    sub_n_from_m1_dist = sub_n_from_m1_dist_;
+    lambda_uses_zero_weight_symbols = lambda_uses_zero_weight_symbols_;
+    debug_smooth = debug_smooth_;
   }
   
   virtual ~ ppm() {};
@@ -467,7 +469,8 @@ public:
       
       std::vector<double> alphas = get_alphas(lambda, counts, context_count);
       
-      if (this->debug) {
+      if (this->debug_smooth) {
+        Rcout << "*** order = " << order << " ***\n";
         Rcout << "pos = " << pos << "\n";
         Rcout << "time = " << time << "\n";
         Rcout << "model_order.chosen = " << model_order.chosen << "\n";
@@ -480,7 +483,7 @@ public:
         Rcout << "counts = ";
         print(counts);
         Rcout << "context_count = " << context_count << "\n";
-        Rcout << "order = " << order << ", lambda = " << lambda << "\n";
+        Rcout << "lambda = " << lambda << "\n";
         Rcout << "alphas = ";
         print(alphas);
       }
@@ -508,7 +511,7 @@ public:
             excluded[i] = true;
           }
         }
-        if (this->debug) {
+        if (this->debug_smooth) {
           Rcout << "new excluded = ";
           print(excluded);
           Rcout << "\n";
@@ -523,7 +526,7 @@ public:
         res[i] = alphas[i] + (1 - lambda) * lower_order_distribution[i];
       }
       
-      if (this->debug) {
+      if (this->debug_smooth) {
         Rcout << "order " << order << " ";
         Rcout << "probability distribution = ";
         print(res);
@@ -553,6 +556,7 @@ public:
   // (see 6.2.3.3), though the thesis does not mention
   // this explicitly.
   virtual double get_lambda(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
+    stop("this virtual get_lambda method should never be called directly");
     return 0.0;
   }
   
@@ -572,24 +576,47 @@ public:
     }
   }
   
+  double get_effective_distinct_symbols(int num_distinct_symbols, 
+                                        const std::vector<double> &counts) {
+    if (this->lambda_uses_zero_weight_symbols) {
+      return num_distinct_symbols;
+    } else {
+      return this->count_positive_values(counts);
+    }
+  }
+  
   double lambda_a(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
-    return static_cast<double>(context_count) /
-      (static_cast<double>(context_count) + 1.0);
+    if (this->debug_smooth) {
+      Rcout << "lambda_a, context_count = " << context_count << "\n";
+    }
+    return context_count / (context_count + 1.0);
   }
   
   double lambda_b(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
+    double effective_distinct_symbols = 
+      this->get_effective_distinct_symbols(num_distinct_symbols,
+                                           counts);
+    
     return static_cast<double>(context_count) /
-      static_cast<double>(context_count + num_distinct_symbols);
+      static_cast<double>(context_count + effective_distinct_symbols);
   }
   
   double lambda_c(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
+    double effective_distinct_symbols = 
+      this->get_effective_distinct_symbols(num_distinct_symbols,
+                                           counts);
+    
     return static_cast<double>(context_count) /
-      static_cast<double>(context_count + num_distinct_symbols);
+      static_cast<double>(context_count + effective_distinct_symbols);
   }
   
   double lambda_d(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
+    double effective_distinct_symbols = 
+      this->get_effective_distinct_symbols(num_distinct_symbols,
+                                           counts);
+    
     return static_cast<double>(context_count) /
-      (static_cast<double>(context_count + num_distinct_symbols / 2.0));
+      (static_cast<double>(context_count + effective_distinct_symbols / 2.0));
   }
   
   double lambda_ax(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
@@ -668,7 +695,7 @@ public:
     double p = 1.0 / denominator;
     std::vector<double> res(this->alphabet_size, p);
     
-    if (this->debug) {
+    if (this->debug_smooth) {
       Rcout << "order minus 1 distribution = ";
       print(res);
       Rcout << "\n";
@@ -753,7 +780,7 @@ public:
     bool exclusion_,
     bool update_exclusion_,
     std::string escape_,
-    bool debug
+    bool debug_smooth
   ) : ppm(
       alphabet_size_,
       order_bound_, 
@@ -763,7 +790,8 @@ public:
       escape_,
       false, // decay
       true, // sub_n_from_m1_dist
-      debug // debug
+      true, // lambda_uses_zero_weight_symbols
+      debug_smooth // debug_smooth
       ) { 
     data = {};
   }
@@ -850,8 +878,11 @@ public:
   // (see 6.2.3.3), though the thesis does not mention
   // this explicitly.
   double get_lambda(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
+    if (this->debug_smooth) {
+      Rcout << "calling ppm_simple.get_lambda()\n";
+    }
     std::string e = this->escape;
-    if (context_count <= 0) {
+    if (context_count <= 0.0) {
       return 0.0;
     } else if (e == "a") {
       return this->lambda_a(counts, context_count, num_distinct_symbols);
@@ -913,6 +944,7 @@ public:
   double noise_mean;
   bool disable_noise;
   int seed;
+  bool debug_decay;
   
   std::mt19937 random_engine;
   std::normal_distribution<> noise_generator;
@@ -924,7 +956,8 @@ public:
     int order_bound_,
     List decay_par,
     int seed,
-    bool debug
+    bool debug_smooth_,
+    bool debug_decay_
   ) : ppm (
       alphabet_size_,
       order_bound_,
@@ -934,7 +967,8 @@ public:
       "a", // escape,
       true, // decay
       false, // sub_n_from_m1_dist
-      debug
+      false, // lambda_uses_zero_weight_symbols
+      debug_smooth_
   ) {
     data = {};
     buffer_length_time = decay_par["buffer_length_time"];
@@ -949,6 +983,7 @@ public:
     ltm_asymptote = decay_par["ltm_asymptote"];
     noise = decay_par["noise"];
     disable_noise = false;
+    debug_decay = debug_decay_;
     
     stm_half_life = (log(2.0) * stm_duration) / (log(stm_weight / ltm_weight));
     
@@ -1075,7 +1110,7 @@ public:
     
     double weight = 0.0;
     for (int i = 0; i < n; i ++) {
-      if (this->debug) {
+      if (this->debug_decay) {
         Rcout << "\n\nobserving from pos = " << pos << ", time = " << time << "\n";
         Rcout << "memory " << i << "/" << n << "\n";
       }
@@ -1093,17 +1128,17 @@ public:
       
       int pos_item_buffer_fails = data.pos[i] + 
         std::max(0, this->buffer_length_items - static_cast<int>(n_gram.size()) + 1);
-      if (this->debug) Rcout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
+      if (this->debug_decay) Rcout << "pos_item_buffer_fails = " << pos_item_buffer_fails << "\n";
       
       // Rcout << "pos = " << pos << ", N = " << N << "\n";
       
       bool item_buffer_failed = pos_item_buffer_fails <= N - 1; // <= pos;
-      if (this->debug) Rcout << "item_buffer_failed = " << item_buffer_failed << "\n";
+      if (this->debug_decay) Rcout << "item_buffer_failed = " << item_buffer_failed << "\n";
       int pos_n_gram_began = data.pos[i] - static_cast<int>(n_gram.size()) + 1;
       
       double temporal_buffer_fail_time = 
         this->all_time.at(pos_n_gram_began) + this->buffer_length_time;
-      if (this->debug) Rcout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
+      if (this->debug_decay) Rcout << "temporal_buffer_fail_time = " << temporal_buffer_fail_time << "\n";
       
       double buffer_fail_time; 
       
@@ -1112,7 +1147,7 @@ public:
       
       if (item_buffer_failed) {
         double time_when_item_buffer_failed = this->all_time.at(pos_item_buffer_fails);
-        if (this->debug) Rcout << "time_when_item_buffer_failed = " << time_when_item_buffer_failed << "\n";
+        if (this->debug_decay) Rcout << "time_when_item_buffer_failed = " << time_when_item_buffer_failed << "\n";
         buffer_fail_time = std::min(time_when_item_buffer_failed,
                                     temporal_buffer_fail_time);
       } else {
@@ -1121,7 +1156,7 @@ public:
       
       double time_since_buffer_fail = time - buffer_fail_time;
       
-      if (this->debug) {
+      if (this->debug_decay) {
         Rcout << "buffer_fail_time = " << buffer_fail_time << "\n";
         Rcout << "time_since_buffer_fail = " << time_since_buffer_fail << "\n";
       }
@@ -1129,14 +1164,14 @@ public:
       double weight_increment;
       
       if (time_since_buffer_fail < 0) {
-        if (this->debug) Rcout << "buffer didn't fail\n";
+        if (this->debug_decay) Rcout << "buffer didn't fail\n";
         weight_increment = this->buffer_weight;
       } else {
-        if (this->debug) Rcout << "buffer failed\n";
+        if (this->debug_decay) Rcout << "buffer failed\n";
         weight_increment = this->decay_stm_ltm(time_since_buffer_fail);
       }
       
-      if (this->debug) Rcout << "weight_increment = " << weight_increment << "\n";
+      if (this->debug_decay) Rcout << "weight_increment = " << weight_increment << "\n";
       
       weight += weight_increment;
     }
@@ -1149,7 +1184,7 @@ public:
       // return std::max(0.0, weight);
     }
     
-    if (this->debug) {
+    if (this->debug_decay) {
       Rcout << "\ntotal weight = " << weight << "\n";
     }
     
@@ -1170,7 +1205,7 @@ public:
                        this->ltm_half_life,
                        this->ltm_asymptote);
     }
-    // if (this->debug) Rcout << "elapsed_time = " << elapsed_time << ", fraction = " << res << "\n";
+    // if (this->debug_decay) Rcout << "elapsed_time = " << elapsed_time << ", fraction = " << res << "\n";
     return res;
   }
   
@@ -1183,7 +1218,10 @@ public:
       asymptote + (start - asymptote) * std::pow(2.0, - elapsed_time / half_life);
   }
 
-  double get_lambda(const std::vector<double> &counts, double context_count) {
+  double get_lambda(const std::vector<double> &counts, double context_count, int num_distinct_symbols) {
+    if (this->debug_smooth) {
+      Rcout << "calling ppm_decay.get_lambda()\n";
+    }
     double total_expected_noise;
     if (this->disable_noise) {
       total_expected_noise = 0.0;
@@ -1197,9 +1235,17 @@ public:
     // Rcout << "total_expected_noise = " << total_expected_noise << "\n";
     // Rcout << "adj_context_count = " << adj_context_count << "\n\n";
     
-    if (context_count <= 0) {
+    if (context_count <= 0.0) { 
+      if (this->debug_smooth) {
+        // this should actually be adj_context_count, but does it matter?
+        // no, because adj_context_count always <= context_count
+        Rcout << "context_count <= 0.0 so lambda = 0.0\n";
+      }
       return 0.0;
     } else {
+      if (this->debug_smooth) {
+        Rcout << "calling lambda_a...\n";
+      }
       return this->lambda_a(counts, adj_context_count, -99); // last parameter ignored
     }
   }
@@ -1278,7 +1324,8 @@ RCPP_EXPOSED_CLASS(record_decay)
          .field("escape", &ppm::escape)
          .field("all_time", &ppm::all_time)
          .field("sub_n_from_m1_dist", &ppm::sub_n_from_m1_dist)
-         .field("debug", &ppm::debug)
+         .field("lambda_uses_zero_weight_symbols", &ppm::lambda_uses_zero_weight_symbols)
+         .field("debug_smooth", &ppm::debug_smooth)
          .method("model_seq", &ppm::model_seq)
       // .method("insert", &ppm::insert)
          .method("get_weight", &ppm::get_weight)
@@ -1293,7 +1340,7 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     class_<ppm_decay>("ppm_decay")
       .derives<ppm>("ppm")
-      .constructor<int, int, List, int, bool>()
+      .constructor<int, int, List, int, bool, bool>()
       .method("get", &ppm_decay::get)
       .method("as_tibble", &ppm_decay::as_tibble)
       .method("as_list", &ppm_decay::as_list)
@@ -1312,6 +1359,7 @@ RCPP_EXPOSED_CLASS(record_decay)
       .field("noise_mean", &ppm_decay::noise_mean)
       .field("disable_noise", &ppm_decay::disable_noise)
       .field("seed", &ppm_decay::seed)
+      .field("debug_decay", &ppm_decay::debug_decay)
     ;
     
     class_<record_decay>("record_decay")
