@@ -16,6 +16,7 @@ test <- function(escape, update_exclusion, file) {
     tolerance = 1e-5, check.names = FALSE)
 }
 
+# These regression tests come from IDyOM v 1.5 (Pearce, 2005)
 test_that("different escape methods, without update exclusion", {
   test("a", update_exclusion = FALSE, "escape-a.R")
   test("b", update_exclusion = FALSE, "escape-b.R")
@@ -24,6 +25,11 @@ test_that("different escape methods, without update exclusion", {
   test("ax", update_exclusion = FALSE, "escape-ax.R")
 })
 
+
+# Note! The LISP implementation of Pearce (2005) has mistakes
+# in the implementation of update exclusion.
+# These regression tests come from the latest version of mtp_development
+# (as of Jan 2020) which has fixed these problems.
 test_that("different escape methods, without update exclusion", {
   test("a", update_exclusion = TRUE, "escape-a-update-excluded.R")
   test("b", update_exclusion = TRUE, "escape-b-update-excluded.R")

@@ -1,9 +1,12 @@
 (in-package :ppm-star)
 
-(defun test-model (sequences alphabet &key (ps t) (escape :c))
-     (let ((model (ppm:make-ppm alphabet :escape escape :mixtures t
-                                :update-exclusion t :order-bound nil)))
-       (prog1 (ppm:model-dataset model sequences :construct? t :predict? t))))
+;; Note! Escape method AX is selected with :X, not with :AX
+(defun test-model (sequences alphabet &key (ps nil) (escape :c) update-exclusion)
+   (let ((model (ppm:make-ppm alphabet :escape escape :mixtures t
+                              :update-exclusion update-exclusion :order-bound nil)))
+     (prog1 
+       (ppm:model-dataset model sequences :construct? t :predict? t)
+       (when ps (ppm:write-model-to-postscript model ps)))))
 
 (defun to-R (file x)
   (with-open-file (s file :direction :output :if-exists :supersede)
@@ -30,8 +33,8 @@
 				(format s ")")
 				(format s ",~%"))))
 		    (format s (if (equal h N) ")" ",~%"))))
-	    (format s (if (equal g M) ")" ",~%"))))))
+	    (format s (if (equal g M) ")" ",~%")))))
+  x)
 
-(to-r "/home/peter/Dropbox/Academic/projects/harrison-peter/ppm/tests/testthat/data/escape-b.R" 
-      (test-model '((a b r a c a d a b r a)) '(a b c d r) :escape :b))
-
+(to-r "/home/peter/Dropbox/Academic/projects/harrison-peter/ppm/tests/testthat/data/escape-b-update-excluded.R" 
+      (test-model '((a b r a c a d a b r a)) '(a b c d r) :escape :b :ps "/home/peter/Downloads/temp.ps"))
