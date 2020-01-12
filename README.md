@@ -33,11 +33,14 @@ used. To check the installed version, you can run the following code in
 your R console:
 
 ``` r
-library(ppm)
-if (!require(devtools)) install.packages("devtools")
-x <- devtools::session_info()
-x$packages[x$packages$package == "ppm", ]
+asNamespace("ppm")$`.__NAMESPACE__.`$spec[["version"]]
 ```
+
+In addition to the GitHub repository, the source code for the `ppm`
+package is permanently archived on Zenodo, and is available at the
+following DOI: <https://doi.org/10.5281/zenodo.2620414>. This DOI will
+always point to the latest version of the `ppm` package, but you can
+also find version-specific DOIs on the Zenodo page.
 
 ## Installation
 
