@@ -9,7 +9,8 @@ new_ppm_decay(alphabet_size, order_bound = 10L, ltm_weight = 1,
   stm_duration = 0, buffer_weight = 1, buffer_length_time = 0,
   buffer_length_items = 0L, only_learn_from_buffer = FALSE,
   only_predict_from_buffer = FALSE,
-  seed = sample.int(.Machine$integer.max, 1))
+  seed = sample.int(.Machine$integer.max, 1), debug_smooth = FALSE,
+  debug_decay = FALSE)
 }
 \arguments{
 \item{alphabet_size}{(Integerish scalar)
@@ -61,6 +62,14 @@ The default value is \code{FALSE}.}
 By default this is linked with R's random seed, such that
 reproducible behaviour can be ensured as usual with the
 \code{\link{set.seed}} function.}
+
+\item{debug_smooth}{(Logical scalar)
+Whether to print (currently rather messy and ad hoc) debug output
+for the smoothing mechanism.}
+
+\item{debug_decay}{(Logical scalar)
+Whether to print (currently rather messy and ad hoc) debug output
+for the decay mechanism.}
 }
 \value{
 A PPM-decay model object.
@@ -103,7 +112,7 @@ having been displaced by new symbols.
 }
 
 There are some subtleties about how this actually works in practice,
-refer to \insertCite{Harrison2019;textual}{ppm} for details.
+refer to \insertCite{Harrison2020;textual}{ppm} for details.
 
 The second phase, short-term memory, begins as soon as the
 buffer phase completes. It has a fixed temporal duration
@@ -122,7 +131,7 @@ to an asymptote of \eqn{w_\infty}.
 The model optionally implements Gaussian noise at the weight retrieval stage.
 This Gaussian is parametrised by the standard deviation parameter
 \eqn{\sigma_\epsilon}.
-See \insertCite{Harrison2019;textual}{ppm} for details.
+See \insertCite{Harrison2020;textual}{ppm} for details.
 
 This function supports simpler decay functions with fewer stages;
 in fact, the default parameters define a one-stage decay function,
@@ -141,7 +150,7 @@ psychological namesakes, but are instead simply terms of convenience.
 
 The resulting PPM-Decay model uses interpolated smoothing with escape method A,
 and explicitly disables exclusion and update exclusion.
-See \insertCite{Harrison2019;textual}{ppm} for details.
+See \insertCite{Harrison2020;textual}{ppm} for details.
 }
 \references{
 \insertAllCited{}

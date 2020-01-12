@@ -137,7 +137,7 @@ new_ppm_simple <- function(
 #' having been displaced by new symbols.
 #' 
 #' There are some subtleties about how this actually works in practice,
-#' refer to \insertCite{Harrison2019;textual}{ppm} for details.
+#' refer to \insertCite{Harrison2020;textual}{ppm} for details.
 #' 
 #' The second phase, short-term memory, begins as soon as the 
 #' buffer phase completes. It has a fixed temporal duration
@@ -156,7 +156,7 @@ new_ppm_simple <- function(
 #' The model optionally implements Gaussian noise at the weight retrieval stage.
 #' This Gaussian is parametrised by the standard deviation parameter
 #' \eqn{\sigma_\epsilon}.
-#' See \insertCite{Harrison2019;textual}{ppm} for details. 
+#' See \insertCite{Harrison2020;textual}{ppm} for details. 
 #' 
 #' This function supports simpler decay functions with fewer stages;
 #' in fact, the default parameters define a one-stage decay function,
@@ -175,7 +175,7 @@ new_ppm_simple <- function(
 #' 
 #' The resulting PPM-Decay model uses interpolated smoothing with escape method A, 
 #' and explicitly disables exclusion and update exclusion.
-#' See \insertCite{Harrison2019;textual}{ppm} for details. 
+#' See \insertCite{Harrison2020;textual}{ppm} for details. 
 #' 
 #' @param alphabet_size
 #' (Integerish scalar)

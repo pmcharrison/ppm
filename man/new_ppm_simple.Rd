@@ -6,7 +6,7 @@
 \usage{
 new_ppm_simple(alphabet_size, order_bound = 10L,
   shortest_deterministic = TRUE, exclusion = TRUE,
-  update_exclusion = TRUE, escape = "c")
+  update_exclusion = TRUE, escape = "c", debug_smooth = FALSE)
 }
 \arguments{
 \item{alphabet_size}{(Integerish scalar)
@@ -41,7 +41,16 @@ If TRUE, implements update exclusion as defined in
 \item{escape}{(Character scalar)
 Takes values 'a', 'b', 'c', 'd', or 'ax',
 corresponding to the eponymous escape methods 
-in \insertCite{Pearce2005;textual}{ppm}.}
+in \insertCite{Pearce2005;textual}{ppm}.
+Note that there is a mistake in the definition of escape method 
+"AX" in \insertCite{Pearce2005;textual}{ppm}; 
+the denominator of lambda needs to have 1 added.
+This is what we implement here. Note that Pearce's
+LISP implementation correctly adds 1 here, like us.}
+
+\item{debug_smooth}{(Logical scalar)
+Whether to print (currently rather messy and ad hoc) debug output
+for smoothing.}
 }
 \value{
 A PPM model object. 
