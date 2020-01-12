@@ -12,10 +12,32 @@ status](https://ci.appveyor.com/api/projects/status/github/pmcharrison/ppm?branc
 status](https://coveralls.io/repos/github/pmcharrison/ppm/badge.svg)](https://coveralls.io/r/pmcharrison/ppm?branch=master)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2620414.svg)](https://doi.org/10.5281/zenodo.2620414)
 
-The `ppm` package implements variants of the Prediction by Partial
-Matching (PPM) algorithm as originally introduced by Cleary and Witten
-(1984), subsequently developed by Bunton (1996), and reviewed by Pearce
-(2005).
+Prediction by Partial Matching (PPM) is a flexible and robust algorithm
+for generating incremental probabilistic predictions for symbolic
+sequences (Cleary and Witten 1984). Many variants of PPM exist in the
+literature. This package, `ppm`, implements the PPM variant developed by
+Bunton (1996) and subsequently used by Pearce (2005) in the Information
+Dynamics Of Music (IDyOM) model. It also implements the PPM-Decay
+algorithm of Harrison et al. (2020), which applies a flexible
+memory-decay kernel to PPM such that historic events are downweighted
+compared to recent events. Please cite the `ppm` package by referring to
+this latter paper:
+
+> Harrison, Peter M. C., Roberta Bianco, Maria Chait, and Marcus T.
+> Pearce. 2020. “PPM-Decay: A Computational Model of Auditory Prediction
+> with Memory Decay.” *bioRxiv*.
+> <https://doi.org/10.1101/2020.01.09.900266>.
+
+You might also want to mention the particular version of the package you
+used. To check the installed version, you can run the following code in
+your R console:
+
+``` r
+library(ppm)
+if (!require(devtools)) install.packages("devtools")
+x <- devtools::session_info()
+x$packages[x$packages$package == "ppm", ]
+```
 
 ## Installation
 
@@ -77,8 +99,8 @@ manipulate within R. For example:
 
 ``` r
 print(letters)
-#>  [1] "a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q"
-#> [18] "r" "s" "t" "u" "v" "w" "x" "y" "z"
+#>  [1] "a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s"
+#> [20] "t" "u" "v" "w" "x" "y" "z"
 seq_2 <- factor(c("a", "b", "r", "a", "c", "a", "d", "a", "b", "r", "a"),
                 levels = c("a", "b", "c", "d", "r"))
 print(seq_2)
@@ -192,7 +214,7 @@ relative weights, are customisable. Each phase can be disabled
 separately to produce simpler families of decay kernels. For example,
 the default parameters define a one-stage exponential decay kernel;
 adding a buffer phase and retrieval noise produces the two-stage decay
-kernel in Harrison et al. (2019).
+kernel in Harrison et al. (2020).
 
 The `new_ppm_decay` function is used to create a new PPM-Decay model. It
 works in a similar way to `new_ppm_simple`, described above for PPM
@@ -254,11 +276,12 @@ Communications* 32 (4): 396–402.
 
 </div>
 
-<div id="ref-Harrison2019">
+<div id="ref-Harrison2020">
 
 Harrison, Peter M. C., Roberta Bianco, Maria Chait, and Marcus T.
-Pearce. 2019. “Modeling Memory Constraints in Auditory Pattern Detection
-with PPM-Decay.” *Working Paper*.
+Pearce. 2020. “PPM-Decay: A Computational Model of Auditory Prediction
+with Memory Decay.” *bioRxiv*.
+<https://doi.org/10.1101/2020.01.09.900266>.
 
 </div>
 
