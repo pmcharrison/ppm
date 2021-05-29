@@ -4,8 +4,14 @@
 \alias{get_weight}
 \title{Get weight}
 \usage{
-get_weight(model, n_gram, pos = 1L, time = 0,
-  update_excluded = FALSE, zero_indexed = FALSE)
+get_weight(
+  model,
+  n_gram,
+  pos = 1L,
+  time = 0,
+  update_excluded = FALSE,
+  zero_indexed = FALSE
+)
 }
 \arguments{
 \item{model}{A PPM model object as produced by (for example)

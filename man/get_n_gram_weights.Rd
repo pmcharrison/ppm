@@ -4,8 +4,7 @@
 \alias{get_n_gram_weights}
 \title{Get n-gram weights}
 \usage{
-get_n_gram_weights(mod, order, pos = 1L, time = 0,
-  zero_indexed = FALSE)
+get_n_gram_weights(mod, order, pos = 1L, time = 0, zero_indexed = FALSE)
 }
 \arguments{
 \item{mod}{A PPM model object as produced by (for example)

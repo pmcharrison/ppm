@@ -1,3 +1,5 @@
+- Implemented `generate` option in `model_seq`.
+
 # ppm 0.2.0
 
 - Added NEWS.md.

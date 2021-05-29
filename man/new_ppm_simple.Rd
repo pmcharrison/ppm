@@ -4,13 +4,21 @@
 \alias{new_ppm_simple}
 \title{Create simple PPM model}
 \usage{
-new_ppm_simple(alphabet_size, order_bound = 10L,
-  shortest_deterministic = TRUE, exclusion = TRUE,
-  update_exclusion = TRUE, escape = "c", debug_smooth = FALSE)
+new_ppm_simple(
+  alphabet_size,
+  order_bound = 10L,
+  shortest_deterministic = TRUE,
+  exclusion = TRUE,
+  update_exclusion = TRUE,
+  escape = "c",
+  debug_smooth = FALSE,
+  alphabet_levels = character()
+)
 }
 \arguments{
 \item{alphabet_size}{(Integerish scalar)
-The size of the alphabet upon which the model will be trained and tested.}
+The size of the alphabet upon which the model will be trained and tested.
+If not provided, this will be taken as \code{length(alphabet_levels)}.}
 
 \item{order_bound}{(Integerish scalar)
 The model's Markov order bound. For example, an order bound of two means
@@ -51,6 +59,10 @@ LISP implementation correctly adds 1 here, like us.}
 \item{debug_smooth}{(Logical scalar)
 Whether to print (currently rather messy and ad hoc) debug output
 for smoothing.}
+
+\item{alphabet_levels}{(Character vector)
+Optional vector of levels for the alphabet. If provided,
+these will be used to define factor levels for the output.}
 }
 \value{
 A PPM model object. 

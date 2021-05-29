@@ -4,9 +4,15 @@
 \alias{plot_n_grams}
 \title{Plot n-grams}
 \usage{
-plot_n_grams(mod, pos = 1L, time = 0, max_alphabet_size = 30L,
-  zero_indexed = FALSE, heights = c(0.25, 0.75),
-  bigram_fill_scale = ggplot2::scale_fill_viridis_c("Probability (relative)"))
+plot_n_grams(
+  mod,
+  pos = 1L,
+  time = 0,
+  max_alphabet_size = 30L,
+  zero_indexed = FALSE,
+  heights = c(0.25, 0.75),
+  bigram_fill_scale = ggplot2::scale_fill_viridis_c("Probability (relative)")
+)
 }
 \arguments{
 \item{mod}{A PPM model object as produced by (for example)

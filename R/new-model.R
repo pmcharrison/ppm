@@ -6,6 +6,7 @@
 #' @param alphabet_size
 #' (Integerish scalar)
 #' The size of the alphabet upon which the model will be trained and tested.
+#' If not provided, this will be taken as \code{length(alphabet_levels)}.
 #' 
 #' @param order_bound
 #' (Integerish scalar)
@@ -53,6 +54,11 @@
 #' Whether to print (currently rather messy and ad hoc) debug output
 #' for smoothing.
 #' 
+#' @param alphabet_levels
+#' (Character vector)
+#' Optional vector of levels for the alphabet. If provided,
+#' these will be used to define factor levels for the output.
+#' 
 #' @note
 #' The implementation does not scale well to very large order bounds (> 50).
 #' 
@@ -75,8 +81,16 @@ new_ppm_simple <- function(
   exclusion = TRUE,
   update_exclusion = TRUE,
   escape = "c",
-  debug_smooth = FALSE
+  debug_smooth = FALSE,
+  alphabet_levels = character()
 ) {
+  if (missing(alphabet_size) && length(alphabet_levels) > 0) {
+    alphabet_size <- length(alphabet_levels)
+  }
+  if (length(alphabet_levels) > 0 && length(alphabet_levels) != alphabet_size) {
+    stop("length(alphabet_levels) must equal alphabet_size.")
+  }
+  
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
   checkmate::qassert(shortest_deterministic, "B1")
@@ -84,13 +98,14 @@ new_ppm_simple <- function(
   checkmate::qassert(update_exclusion, "B1")
   checkmate::qassert(escape, "S1")
   checkmate::qassert(debug_smooth, "B1")
+  checkmate::qassert(alphabet_levels, "S")
   
   valid_escape_methods <- c("a", "b", "c", "d", "ax")
   if (!escape %in% valid_escape_methods)
     stop("escape parameter must be one of: ",
          paste(valid_escape_methods, collapse = ", "))
   
-  new(
+  mod <- new(
     ppm_simple, 
     alphabet_size = as.integer(alphabet_size),
     order_bound = as.integer(order_bound),
@@ -98,8 +113,12 @@ new_ppm_simple <- function(
     exclusion = exclusion,
     update_exclusion = update_exclusion,
     escape = escape,
-    debug_smooth = debug_smooth
+    alphabet_levels
   )
+  
+  mod$debug_smooth <- debug_smooth
+  
+  mod
 }
 
 #' Create decay-based PPM model
@@ -176,10 +195,6 @@ new_ppm_simple <- function(
 #' The resulting PPM-Decay model uses interpolated smoothing with escape method A, 
 #' and explicitly disables exclusion and update exclusion.
 #' See \insertCite{Harrison2020;textual}{ppm} for details. 
-#' 
-#' @param alphabet_size
-#' (Integerish scalar)
-#' The size of the alphabet from which sequences are drawn.
 #' 
 #' @param order_bound
 #' (Integerish scalar)
@@ -259,6 +274,8 @@ new_ppm_simple <- function(
 #' \code{\link{new_ppm_simple}},
 #' \code{\link{model_seq}}.
 #' 
+#' @inheritParams new_ppm_simple
+#' 
 #' @md
 #' 
 #' @references
@@ -281,8 +298,16 @@ new_ppm_decay <- function(
   only_predict_from_buffer = FALSE,
   seed = sample.int(.Machine$integer.max, 1),
   debug_smooth = FALSE,
-  debug_decay = FALSE
+  debug_decay = FALSE,
+  alphabet_levels = character()
 ) {
+  if (missing(alphabet_size) && length(alphabet_levels) > 0) {
+    alphabet_size <- length(alphabet_levels)
+  }
+  if (length(alphabet_levels) > 0 && length(alphabet_levels) != alphabet_size) {
+    stop("length(alphabet_levels) must equal alphabet_size.")
+  }
+    
   checkmate::qassert(alphabet_size, "X1")
   checkmate::qassert(order_bound, "X[0,)")
   checkmate::qassert(ltm_weight, "N1[0,)")
@@ -298,6 +323,7 @@ new_ppm_decay <- function(
   checkmate::qassert(only_predict_from_buffer, "B1")
   checkmate::qassert(debug_smooth, "B1")
   checkmate::qassert(debug_decay, "B1")
+  checkmate::qassert(alphabet_levels, "S")
   
   decay_par = list(
     ltm_weight = as.numeric(ltm_weight),
@@ -313,15 +339,19 @@ new_ppm_decay <- function(
     only_predict_from_buffer = as.logical(only_predict_from_buffer)
   )
   
-  new(
+  mod <- new(
     ppm_decay, 
     alphabet_size = as.integer(alphabet_size),
     order_bound = as.integer(order_bound),
     decay_par = decay_par,
     seed = as.integer(seed),
-    debug_smooth = debug_smooth,
-    debug_decay = debug_decay
+    alphabet_levels = alphabet_levels
   )
+  
+  mod$debug_decay <- debug_decay
+  mod$debug_smooth <- debug_smooth
+  
+  mod
 }
 
 #' Is 'x' a 'ppm' object?

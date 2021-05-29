@@ -93,6 +93,15 @@ RObject list_to_tibble(List x) {
   return(f(x));
 }
 
+NumericVector as_numeric_vector(std::vector<double> x) {
+  int size = x.size();
+  NumericVector res = NumericVector(size);
+  for (int i = 0; i < size; i ++) {
+    res[i] = x[i];
+  }
+  return res;
+}
+
 template <typename Container> // we can make this generic for any container [1]
 struct container_hash {
   std::size_t operator() (Container const& c) const {
@@ -278,6 +287,7 @@ public:
   bool sub_n_from_m1_dist;
   bool lambda_uses_zero_weight_symbols;
   bool debug_smooth;
+  CharacterVector alphabet_levels;
   
   int num_observations = 0;
   std::vector<double> all_time;
@@ -291,7 +301,7 @@ public:
       bool decay_,
       bool sub_n_from_m1_dist_,
       bool lambda_uses_zero_weight_symbols_,
-      bool debug_smooth_
+      CharacterVector alphabet_levels_
   ) {
     if (alphabet_size_ <= 0) {
       stop("alphabet size must be greater than 0");
@@ -307,7 +317,7 @@ public:
     decay = decay_;
     sub_n_from_m1_dist = sub_n_from_m1_dist_;
     lambda_uses_zero_weight_symbols = lambda_uses_zero_weight_symbols_;
-    debug_smooth = debug_smooth_;
+    alphabet_levels = alphabet_levels_;
   }
   
   virtual ~ ppm() {};
@@ -351,7 +361,8 @@ public:
                                 bool train = true,
                                 bool predict = true,
                                 bool return_distribution = true,
-                                bool return_entropy = true) {
+                                bool return_entropy = true,
+                                bool generate = false) {
     int n = x.size();
     if (this->decay && 
         (static_cast<unsigned int>(x.size()) != 
@@ -375,7 +386,11 @@ public:
         subseq(x,
                std::max(0, i - order_bound),
                i - 1);
-        result.insert(predict_symbol(x[i], context, pos_i, time_i));
+        symbol_prediction pred = predict_symbol(x[i], context, pos_i, time_i, generate);
+        result.insert(pred);
+        if (generate) {
+          x[i] = pred.symbol;
+        }
       }
       // Train
       if (train) {
@@ -390,13 +405,20 @@ public:
     return(result);
   }
   
-  symbol_prediction predict_symbol(int symbol, const sequence &context,
-                                   int pos, double time) {
-    if (symbol < 0) {
-      stop("symbols must be greater than or equal to 0");
-    }
-    if (symbol > alphabet_size - 1) {
-      stop("symbols cannot exceed (alphabet_size - 1)");
+  symbol_prediction predict_symbol(
+      int symbol, 
+      const sequence &context,
+      int pos, 
+      double time,
+      bool generate
+    ) {
+    if (!generate) { 
+      if (symbol < 0) {
+        stop("symbols must be greater than or equal to 0");
+      }
+      if (symbol > alphabet_size - 1) {
+        stop("symbols cannot exceed (alphabet_size - 1)");
+      }
     }
     
     model_order model_order = this->get_model_order(context, pos, time);
@@ -405,6 +427,14 @@ public:
                                                             pos,
                                                             time);
     
+    if (generate) {
+      int n_samples = 1;
+      bool replace = false;
+      NumericVector probs = as_numeric_vector(dist);
+      bool one_indexed = false;
+      symbol = Rcpp::sample(alphabet_size, n_samples, replace, probs, one_indexed)[0];
+    }
+  
     symbol_prediction out(symbol, pos, time, model_order.chosen, dist);
     return(out);
   } 
@@ -779,7 +809,7 @@ public:
     bool exclusion_,
     bool update_exclusion_,
     std::string escape_,
-    bool debug_smooth
+    CharacterVector alphabet_levels_
   ) : ppm(
       alphabet_size_,
       order_bound_, 
@@ -790,7 +820,7 @@ public:
       false, // decay
       true, // sub_n_from_m1_dist
       true, // lambda_uses_zero_weight_symbols
-      debug_smooth // debug_smooth
+      alphabet_levels_
       ) { 
     data = {};
   }
@@ -955,8 +985,7 @@ public:
     int order_bound_,
     List decay_par,
     int seed,
-    bool debug_smooth_,
-    bool debug_decay_
+    CharacterVector alphabet_levels_
   ) : ppm (
       alphabet_size_,
       order_bound_,
@@ -967,7 +996,7 @@ public:
       true, // decay
       false, // sub_n_from_m1_dist
       false, // lambda_uses_zero_weight_symbols
-      debug_smooth_
+      alphabet_levels_
   ) {
     data = {};
     buffer_length_time = decay_par["buffer_length_time"];
@@ -982,7 +1011,7 @@ public:
     ltm_asymptote = decay_par["ltm_asymptote"];
     noise = decay_par["noise"];
     disable_noise = false;
-    debug_decay = debug_decay_;
+    debug_decay = false;
     
     stm_half_life = (log(2.0) * stm_duration) / (log(stm_weight / ltm_weight));
     
@@ -1325,6 +1354,7 @@ RCPP_EXPOSED_CLASS(record_decay)
          .field("sub_n_from_m1_dist", &ppm::sub_n_from_m1_dist)
          .field("lambda_uses_zero_weight_symbols", &ppm::lambda_uses_zero_weight_symbols)
          .field("debug_smooth", &ppm::debug_smooth)
+         .field("alphabet_levels", &ppm::alphabet_levels)
          .method("model_seq", &ppm::model_seq)
       // .method("insert", &ppm::insert)
          .method("get_weight", &ppm::get_weight)
@@ -1332,14 +1362,14 @@ RCPP_EXPOSED_CLASS(record_decay)
     
     class_<ppm_simple>("ppm_simple")
       .derives<ppm>("ppm")
-      .constructor<int, int, bool, bool, bool, std::string, bool>()
+      .constructor<int, int, bool, bool, bool, std::string, CharacterVector>()
       .method("get_count", &ppm_simple::get_count)
       .method("as_tibble", &ppm_simple::as_tibble)
     ;
     
     class_<ppm_decay>("ppm_decay")
       .derives<ppm>("ppm")
-      .constructor<int, int, List, int, bool, bool>()
+      .constructor<int, int, List, int, CharacterVector>()
       .method("get", &ppm_decay::get)
       .method("as_tibble", &ppm_decay::as_tibble)
       .method("as_list", &ppm_decay::as_list)
