@@ -1,3 +1,5 @@
+# ppm 0.3.0
+
 - Implemented `generate` option in `model_seq`.
 
 # ppm 0.2.0

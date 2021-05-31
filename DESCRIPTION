@@ -1,7 +1,7 @@
 Package: ppm
 Type: Package
 Title: Prediction by Partial Matching
-Version: 0.2.0
+Version: 0.3.0
 Date: 2019-03-08
 Author: Peter M. C. Harrison
 Maintainer: Peter M. C. Harrison <pmc.harrison@gmail.com>
