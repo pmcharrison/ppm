@@ -114,7 +114,14 @@ print(as.integer(seq_2))
 ```
 
 The *ppm* package treats factor objects like their underlying integer
-representations.
+representations. When modelling factor objects, it’s recommended to pass
+the underlying factor representation to the PPM model upon
+initialisation. In this case, the `alphabet_size` parameter need not be
+provided.
+
+``` r
+mod <- new_ppm_simple(alphabet_levels = c("a", "b", "c", "d", "r"))
+```
 
 You feed sequences to the PPM model using the `model_seq` function. By
 default, the model processes these sequences incrementally, one symbol
@@ -127,18 +134,18 @@ res <- model_seq(mod, seq_2)
 print(res)
 #> # A tibble: 11 x 5
 #>    symbol model_order information_content entropy distribution
-#>     <int>       <int>               <dbl>   <dbl> <list>      
-#>  1      1          -1                2.32    2.32 <dbl [5]>   
-#>  2      2           0                3.32    1.77 <dbl [5]>   
-#>  3      5           0                3.17    2.11 <dbl [5]>   
-#>  4      1           0                2       2.25 <dbl [5]>   
-#>  5      3           1                3.91    1.86 <dbl [5]>   
-#>  6      1           0                1.91    2.29 <dbl [5]>   
-#>  7      4           1                3.58    2.18 <dbl [5]>   
-#>  8      1           0                2       2.31 <dbl [5]>   
-#>  9      2           1                2.20    2.30 <dbl [5]>   
-#> 10      5           1                1.32    2.16 <dbl [5]>   
-#> 11      1           1                1.22    2.13 <dbl [5]>
+#>    <fct>        <int>               <dbl>   <dbl> <list>      
+#>  1 a               -1                2.32    2.32 <dbl [5]>   
+#>  2 b                0                3.32    1.77 <dbl [5]>   
+#>  3 r                0                3.17    2.11 <dbl [5]>   
+#>  4 a                0                2       2.25 <dbl [5]>   
+#>  5 c                1                3.91    1.86 <dbl [5]>   
+#>  6 a                0                1.91    2.29 <dbl [5]>   
+#>  7 d                1                3.58    2.18 <dbl [5]>   
+#>  8 a                0                2       2.31 <dbl [5]>   
+#>  9 b                1                2.20    2.30 <dbl [5]>   
+#> 10 r                1                1.32    2.16 <dbl [5]>   
+#> 11 a                1                1.22    2.13 <dbl [5]>
 ```
 
 The output of `model_seq` is a tibble with several columns. Each row
@@ -147,16 +154,16 @@ order of presentation. The row describes what happened when the model
 tried to predict this element, conditioned on the preceding elements in
 the sequence. Each row has the following fields:
 
-  - `symbol` - The integer encoding of the corresponding symbol in the
+-   `symbol` - The integer encoding of the corresponding symbol in the
     sequence.
-  - `model_order` - The highest-order *n*-gram model used for generating
+-   `model_order` - The highest-order *n*-gram model used for generating
     predictions.
-  - `information_content` - The negative log probability, or
+-   `information_content` - The negative log probability, or
     *information content*, of the observed symbol according to the
     model.
-  - `entropy` - The entropy of the model’s predictive distribution when
+-   `entropy` - The entropy of the model’s predictive distribution when
     predicting that element of the sequence.
-  - `distribution`- The predictive probability distribution when
+-   `distribution`- The predictive probability distribution when
     predicting that element of the sequence.
 
 Often we are particularly interested in the `information_content` field,
@@ -171,7 +178,7 @@ plot(res$information_content,
      ylim = c(0, 5))
 ```
 
-<img src="man/figures/README-unnamed-chunk-5-1.png" width="50%" style="display: block; margin: auto;" />
+<img src="man/figures/README-unnamed-chunk-6-1.png" width="50%" style="display: block; margin: auto;" />
 
 The `model_seq` function changes the input PPM model object, even the
 absence of the assignment operator `<-`. Typically, the PPM model will
@@ -190,7 +197,19 @@ points(res_2$information_content,
        type = "l", col = "red")
 ```
 
-<img src="man/figures/README-unnamed-chunk-6-1.png" width="50%" style="display: block; margin: auto;" />
+<img src="man/figures/README-unnamed-chunk-7-1.png" width="50%" style="display: block; margin: auto;" />
+
+By setting `generate = TRUE`, we can also instruct the model to generate
+new samples based on the statistics that it has learned so far. In this
+case the first argument to `model_seq` should be an integer
+corresponding to the desired length of the generated sequence.
+
+``` r
+res_3 <- model_seq(mod, seq = 20, generate = TRUE)
+res_3$symbol
+#>  [1] a b r a c a d a b r a c a d a b r a c a
+#> Levels: a b c d r
+```
 
 ## PPM-Decay
 
@@ -200,17 +219,16 @@ modifies this behaviour, introducing a customisable memory decay kernel
 that determines the weight of historic observations as a function of the
 time and number of events observed since the original event. For
 example, a decay kernel for modelling auditory prediction might resemble
-the
-following:
+the following:
 
 <img src="man/figures/example-decay-kernel.png" width="50%" style="display: block; margin: auto;" />
 
 In its most general form (illustrated above), the decay kernel comprises
 three phases:
 
-  - A buffer phase (yellow);
-  - A short-term memory phase (red);
-  - A long-term memory phase (blue).
+-   A buffer phase (yellow);
+-   A short-term memory phase (red);
+-   A long-term memory phase (blue).
 
 The parameters for these different phases, in particular durations and
 relative weights, are customisable. Each phase can be disabled
@@ -241,45 +259,46 @@ seq_2_time <- seq_along(seq_2)
 print(seq_2_time)
 #>  [1]  1  2  3  4  5  6  7  8  9 10 11
 
-res_3 <- model_seq(mod_decay, 
+res_4 <- model_seq(mod_decay, 
                    seq_2,
                    time = seq_2_time)
 
-plot(res$information_content,
+plot(res_4$information_content,
      xlab = "Position",
      ylab = "Information content (bits)",
      type = "l", 
      ylim = c(0, 5))
-points(res_3$information_content,
+points(res_4$information_content,
        type = "l", col = "blue")
 ```
 
-<img src="man/figures/README-unnamed-chunk-9-1.png" width="50%" style="display: block; margin: auto;" />
+<img src="man/figures/README-unnamed-chunk-11-1.png" width="50%" style="display: block; margin: auto;" />
 
 Here the original PPM output is plotted in black, the PPM-Decay model in
 blue.
 
 ## References
 
-<div id="refs" class="references">
+<div id="refs" class="references csl-bib-body hanging-indent">
 
-<div id="ref-Bunton1996">
+<div id="ref-Bunton1996" class="csl-entry">
 
-Bunton, Suzanne. 1996. “On-line stochastic processes in data
-compression.” PhD dissertation, Seattle, WA: University of Washington.
+Bunton, Suzanne. 1996. “<span class="nocase">On-line stochastic
+processes in data compression</span>.” PhD dissertation, Seattle, WA:
+University of Washington.
 
 </div>
 
-<div id="ref-Cleary1984">
+<div id="ref-Cleary1984" class="csl-entry">
 
-Cleary, John G., and Ian H. Witten. 1984. “Data compression using
-adaptive coding and partial string matching.” *IEEE Transactions on
-Communications* 32 (4): 396–402.
+Cleary, John G., and Ian H. Witten. 1984. “<span class="nocase">Data
+compression using adaptive coding and partial string matching</span>.”
+*IEEE Transactions on Communications* 32 (4): 396–402.
 <https://doi.org/10.1109/TCOM.1984.1096090>.
 
 </div>
 
-<div id="ref-Harrison2020">
+<div id="ref-Harrison2020" class="csl-entry">
 
 Harrison, Peter M. C., Roberta Bianco, Maria Chait, and Marcus T.
 Pearce. 2020. “PPM-Decay: A Computational Model of Auditory Prediction
@@ -288,11 +307,12 @@ with Memory Decay.” *bioRxiv*.
 
 </div>
 
-<div id="ref-Pearce2005">
+<div id="ref-Pearce2005" class="csl-entry">
 
-Pearce, Marcus T. 2005. “The construction and evaluation of statistical
-models of melodic structure in music perception and composition.” PhD
-thesis, London, UK: City University.
+Pearce, Marcus T. 2005. “<span class="nocase">The construction and
+evaluation of statistical models of melodic structure in music
+perception and composition</span>.” PhD thesis, London, UK: City
+University.
 
 </div>
 

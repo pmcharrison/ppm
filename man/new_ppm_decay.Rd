@@ -4,17 +4,30 @@
 \alias{new_ppm_decay}
 \title{Create decay-based PPM model}
 \usage{
-new_ppm_decay(alphabet_size, order_bound = 10L, ltm_weight = 1,
-  ltm_half_life = 10, ltm_asymptote = 0, noise = 0, stm_weight = 1,
-  stm_duration = 0, buffer_weight = 1, buffer_length_time = 0,
-  buffer_length_items = 0L, only_learn_from_buffer = FALSE,
+new_ppm_decay(
+  alphabet_size,
+  order_bound = 10L,
+  ltm_weight = 1,
+  ltm_half_life = 10,
+  ltm_asymptote = 0,
+  noise = 0,
+  stm_weight = 1,
+  stm_duration = 0,
+  buffer_weight = 1,
+  buffer_length_time = 0,
+  buffer_length_items = 0L,
+  only_learn_from_buffer = FALSE,
   only_predict_from_buffer = FALSE,
-  seed = sample.int(.Machine$integer.max, 1), debug_smooth = FALSE,
-  debug_decay = FALSE)
+  seed = sample.int(.Machine$integer.max, 1),
+  debug_smooth = FALSE,
+  debug_decay = FALSE,
+  alphabet_levels = character()
+)
 }
 \arguments{
 \item{alphabet_size}{(Integerish scalar)
-The size of the alphabet from which sequences are drawn.}
+The size of the alphabet upon which the model will be trained and tested.
+If not provided, this will be taken as \code{length(alphabet_levels)}.}
 
 \item{order_bound}{(Integerish scalar)
 The model's Markov order bound.}
@@ -70,6 +83,10 @@ for the smoothing mechanism.}
 \item{debug_decay}{(Logical scalar)
 Whether to print (currently rather messy and ad hoc) debug output
 for the decay mechanism.}
+
+\item{alphabet_levels}{(Character vector)
+Optional vector of levels for the alphabet. If provided,
+these will be used to define factor levels for the output.}
 }
 \value{
 A PPM-decay model object.

@@ -118,6 +118,13 @@ print(as.integer(seq_2))
 ```
 
 The *ppm* package treats factor objects like their underlying integer representations.
+When modelling factor objects, it's recommended to pass the underlying factor representation
+to the PPM model upon initialisation. In this case, the `alphabet_size` parameter need not 
+be provided.
+
+```{r}
+mod <- new_ppm_simple(alphabet_levels = c("a", "b", "c", "d", "r"))
+```
 
 You feed sequences to the PPM model using the `model_seq` function.
 By default, the model processes these sequences incrementally,
@@ -177,6 +184,16 @@ points(res_2$information_content,
        type = "l", col = "red")
 ```
 
+By setting `generate = TRUE`, we can also instruct the model to generate new samples
+based on the statistics that it has learned so far. In this case the first argument to 
+`model_seq` should be an integer corresponding to the desired length of the generated sequence.
+
+```{r}
+res_3 <- model_seq(mod, seq = 20, generate = TRUE)
+res_3$symbol
+```
+
+
 ## PPM-Decay
 
 The original PPM algorithm has a perfect memory,
@@ -229,16 +246,16 @@ symbol observations.
 seq_2_time <- seq_along(seq_2)
 print(seq_2_time)
 
-res_3 <- model_seq(mod_decay, 
+res_4 <- model_seq(mod_decay, 
                    seq_2,
                    time = seq_2_time)
 
-plot(res$information_content,
+plot(res_4$information_content,
      xlab = "Position",
      ylab = "Information content (bits)",
      type = "l", 
      ylim = c(0, 5))
-points(res_3$information_content,
+points(res_4$information_content,
        type = "l", col = "blue")
 ```
 

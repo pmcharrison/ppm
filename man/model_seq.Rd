@@ -4,20 +4,30 @@
 \alias{model_seq}
 \title{Model sequence}
 \usage{
-model_seq(model, seq, time = NULL, zero_indexed = FALSE,
-  train = TRUE, predict = TRUE, return_distribution = TRUE,
-  return_entropy = TRUE)
+model_seq(
+  model,
+  seq,
+  time = NULL,
+  zero_indexed = FALSE,
+  train = TRUE,
+  predict = TRUE,
+  return_distribution = TRUE,
+  return_entropy = TRUE,
+  generate = FALSE
+)
 }
 \arguments{
 \item{model}{A PPM model object as produced by (for example)
 \code{\link{new_ppm_simple}} or \code{\link{new_ppm_decay}}.}
 
-\item{seq}{An integer vector defining the input sequence
+\item{seq}{When \code{generate = FALSE} an integer vector defining the input sequence
 (equivalently a numeric vector containing solely integers,
-or a factor vector, both of which which will be coerced to integer vectors).}
+or a factor vector, both of which which will be coerced to integer vectors).
+When \code{generate = TRUE}, an integer scalar giving the desired length
+of the generated sequence.}
 
 \item{time}{(NULL or a numeric vector)
-Timepoints corresponding to each element of the argument \code{seq}.
+Timepoints corresponding to each element of the sequence.
 Only used by certain model types (e.g. decay-based models).}
 
 \item{zero_indexed}{(Logical scalar)
@@ -41,6 +51,12 @@ potential continuation as part of the model output
 \item{return_entropy}{(Logical scalar)
 Whether or not to return the entropy of each event prediction
 (ignored if \code{predict = FALSE}).}
+
+\item{generate}{(Logical scalar)
+If \code{TRUE}, the output will correspond to a newly generated sequence
+with length as specified by the \code{seq} argument,
+produced by sampling from the model's predictive distribution.
+The default is \code{FALSE}.}
 }
 \value{
 A \code{\link[tibble]{tibble}} which will be empty if \code{predict = FALSE}
@@ -60,5 +76,5 @@ symbol, conditioned on the preceding symbols.
 }
 }
 \description{
-Analyses a sequence using a PPM model.
+Analyses or generates a sequence using a PPM model.
 }
